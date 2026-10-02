@@ -1,0 +1,800 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>聲音的形狀</title>
+<meta name="description" content="用麥克風把你的聲音即時變成 3D 的形狀：時間、音高、亮度。聲音只在你的瀏覽器裡分析，不會上傳。">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23d4402a'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23f3f0e8' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  /* 和紙與墨：一張紙、一種墨、一點朱。其餘都留白。 */
+  :root {
+    color-scheme: light;
+    --paper: #f3f0e8;
+    --ink: #1d1c19;
+    --ink-2: #5b5850;
+    --ink-3: #8f8b80;
+    --hair: #dedacd;
+    --axis: #b9b4a6;
+    --shu: #d4402a;
+    --serif: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif TC", "PMingLiU", serif;
+    --sans: system-ui, "Microsoft JhengHei", "PingFang TC", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:where(:not([data-theme="light"])) {
+      color-scheme: dark;
+      --paper: #151412; --ink: #e9e4d7; --ink-2: #b3ae9f; --ink-3: #7f7b6f;
+      --hair: #2a2823; --axis: #4a463e; --shu: #ee6a4d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --paper: #151412; --ink: #e9e4d7; --ink-2: #b3ae9f; --ink-3: #7f7b6f;
+    --hair: #2a2823; --axis: #4a463e; --shu: #ee6a4d;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    background: var(--paper); color: var(--ink); overflow: hidden;
+    font: 13px/1.8 var(--sans); letter-spacing: 0.02em;
+  }
+  #stage { position: fixed; inset: 0; }
+  #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+  #stage canvas:active { cursor: grabbing; }
+  #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
+  .lbl {
+    position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 11px; color: var(--ink-3);
+    font-variant-numeric: tabular-nums; will-change: transform; line-height: 1.3;
+  }
+  .lbl.title { font-family: var(--serif); font-size: 13px; color: var(--ink-2); letter-spacing: 0.25em; }
+  .lbl.title small { font-family: var(--sans); font-size: 9px; letter-spacing: 0.12em; color: var(--ink-3); margin-left: 6px; }
+  .lbl.now { color: var(--shu); font-family: var(--serif); letter-spacing: 0.2em; }
+  .lbl.obj { font-family: var(--serif); font-size: 12px; color: var(--ink); text-align: center; letter-spacing: 0.1em; }
+  .lbl.obj small { display: block; font-family: var(--sans); font-size: 10px; color: var(--ink-3); letter-spacing: 0.04em; }
+
+  .hud { position: fixed; z-index: 2; }
+  .head { top: 28px; left: 30px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+  .head h1 {
+    margin: 0; font: 500 22px/1 var(--serif); letter-spacing: 0.45em; writing-mode: vertical-rl;
+  }
+  .seal {
+    width: 22px; height: 22px; background: var(--shu); color: var(--paper); display: grid; place-items: center;
+    font: 500 14px/1 var(--serif); border-radius: 2px;
+  }
+  .head a { color: var(--ink-3); text-decoration: none; font-size: 11px; letter-spacing: 0.2em; writing-mode: vertical-rl; }
+  .head a:hover { color: var(--ink); }
+
+  .foot { left: 30px; bottom: 26px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); }
+  .status { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); }
+  .status.demo .dot { background: transparent; box-shadow: inset 0 0 0 1px var(--ink); }
+  .status.wait .dot { background: var(--ink-3); }
+  .status.bad .dot { background: var(--shu); }
+  .status.bad { color: var(--shu); }
+  .now-row { display: flex; gap: 18px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+  .now-row b { font-weight: 500; color: var(--ink); }
+
+  .theory { top: 28px; right: 30px; width: 300px; max-height: calc(100vh - 90px); overflow: auto; color: var(--ink-2); font-size: 12px; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); padding-bottom: 22px; }
+  .theory::-webkit-scrollbar { display: none; }
+  .theory summary { cursor: pointer; list-style: none; font: 500 14px/1 var(--serif); letter-spacing: 0.3em; color: var(--ink); padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+  .theory summary::-webkit-details-marker { display: none; }
+  .theory summary::after { content: "－"; float: right; color: var(--ink-3); font-family: var(--sans); letter-spacing: 0; }
+  .theory details:not([open]) summary::after { content: "＋"; }
+  .theory details:not([open]) summary { border-bottom-color: transparent; }
+  .row { padding: 7px 0; border-bottom: 1px solid var(--hair); }
+  .row .k { display: flex; gap: 10px; align-items: baseline; color: var(--ink); font-family: var(--serif); font-size: 13px; letter-spacing: 0.12em; }
+  .row .k i { font-style: normal; font-family: var(--sans); font-size: 10px; letter-spacing: 0.08em; color: var(--ink-3); min-width: 38px; }
+  .row p { margin: 1px 0 0 48px; line-height: 1.6; font-size: 11.5px; }
+  .row cite { display: block; margin: 1px 0 0 48px; font-style: normal; font-size: 10.5px; color: var(--ink-3); }
+  .legend { padding: 12px 0 2px; display: grid; gap: 8px; }
+  .legend .bar { height: 6px; background: linear-gradient(to right, color-mix(in srgb, var(--ink) 90%, transparent), color-mix(in srgb, var(--ink) 14%, transparent)); border-radius: 3px; }
+  .legend .scale { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+  .legend .size { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--ink-3); }
+  .legend .size i { display: inline-block; border-radius: 50%; background: color-mix(in srgb, var(--ink) 60%, transparent); }
+  .set { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 11.5px; padding-top: 10px; }
+  .set output { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 38px; text-align: right; }
+  input[type=range] { width: 100%; accent-color: var(--ink); height: 14px; }
+  .note { margin: 12px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--ink-3); }
+
+  .bar-btns { left: 50%; transform: translateX(-50%); bottom: 24px; display: flex; gap: 4px; }
+  .bar-btns button {
+    font: inherit; font-size: 12px; letter-spacing: 0.2em; background: none; color: var(--ink-3); border: 0;
+    border-bottom: 1px solid transparent; padding: 4px 12px; cursor: pointer;
+  }
+  .bar-btns button:hover { color: var(--ink); }
+  .bar-btns button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--shu); }
+
+  #tip {
+    position: fixed; z-index: 4; pointer-events: none; display: none; white-space: nowrap;
+    background: var(--paper); border: 1px solid var(--axis); padding: 8px 12px; font-size: 12px; line-height: 1.7;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  #tip .t { font: 500 13px/1.4 var(--serif); letter-spacing: 0.15em; margin-bottom: 2px; }
+  #tip .m { color: var(--ink-3); margin-right: 6px; }
+  #fatal { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center; padding: 24px; background: var(--paper); }
+  #fatal[hidden] { display: none; }
+
+  @media (max-width: 760px) {
+    .head { top: 14px; left: 16px; flex-direction: row; align-items: center; }
+    .head h1 { writing-mode: horizontal-tb; font-size: 18px; letter-spacing: 0.3em; }
+    .head a { writing-mode: horizontal-tb; }
+    .theory { top: 52px; right: 16px; left: 16px; width: auto; max-height: 52vh; background: var(--paper); padding: 0 0 4px; }
+    .foot { left: 16px; bottom: 92px; }
+    .bar-btns { bottom: 12px; width: calc(100% - 20px); justify-content: center; flex-wrap: wrap; }
+  }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="stage"></div>
+<div id="labels"></div>
+<div id="tip"></div>
+
+<header class="hud head">
+  <h1>聲音的形狀</h1>
+  <div class="seal" aria-hidden="true">聲</div>
+  <a href="/" id="backLink">儀表板</a>
+</header>
+
+<aside class="hud theory" aria-label="理論對照">
+  <details open id="theory">
+    <summary>理論對照</summary>
+    <div class="row"><div class="k"><i>X</i>時間</div>
+      <p>聲音是會展開的形態：起音、持續、結束。</p><cite>Smalley 1997 · spectromorphology</cite></div>
+    <div class="row"><div class="k"><i>Y</i>音高</div>
+      <p>頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。</p><cite>Smalley 1997 · Wessel 1979</cite></div>
+    <div class="row"><div class="k"><i>Z</i>亮度</div>
+      <p>頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。</p><cite>Grey 1977 · timbre space</cite></div>
+    <div class="row"><div class="k"><i>墨色</i>音調 ↔ 噪音</div>
+      <p>墨濃是有明確音高（note），墨淡是噪音（noise），之間是含糊的音高（node）。噪音沉在底部的無音高帶。</p><cite>Smalley 1997 · spectral typology</cite></div>
+    <div class="row"><div class="k"><i>連線</i>聲音物件</div>
+      <p>一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。</p><cite>Schaeffer 1966 · objet sonore</cite></div>
+    <div class="row"><div class="k"><i>短暫</i>只留幾秒</div>
+      <p>點會自己消失，編碼聲音的東西和聲音一樣短暫。</p><cite>SensaBubble, CHI 2014 · ephemeral</cite></div>
+
+    <div class="legend">
+      <div><div class="bar"></div><div class="scale"><span>note 音調</span><span>node</span><span>noise 噪音</span></div></div>
+      <div class="size"><i style="width:5px;height:5px"></i><i style="width:10px;height:10px"></i><i style="width:16px;height:16px"></i>點的大小 = 響度</div>
+    </div>
+    <label class="set">保留<input type="range" id="rRet" min="1" max="60" step="1" value="3"><output id="oRet">3 秒</output></label>
+    <label class="set">最小響度<input type="range" id="rMin" min="2" max="25" step="1" value="6"><output id="oMin">6 dB</output></label>
+    <p class="note">這是依文獻做的設計對照，軸的選擇是詮釋，不等於這些文獻自己用的軸。</p>
+    <p class="note">按「麥克風」會用你這台電腦的麥克風。聲音只在你的瀏覽器裡分析，不會傳到任何地方。</p>
+  </details>
+</aside>
+
+<footer class="hud foot">
+  <div class="status" id="status"><i class="dot"></i><span id="statusText">連線中…</span></div>
+  <div class="now-row"><span>音高 <b id="nPitch">–</b></span><span>亮度 <b id="nCen">–</b></span><span>響度 <b id="nRel">–</b></span><span>點 <b id="nCount">0</b></span></div>
+</footer>
+
+<div class="hud bar-btns">
+  <button id="bPause" aria-pressed="false">暫停</button>
+  <button id="bClear">清除</button>
+  <button id="bRot" aria-pressed="false">旋轉</button>
+  <button id="bLine" aria-pressed="true">連線</button>
+  <button id="bLbl" aria-pressed="true">標籤</button>
+  <button id="bMic" aria-pressed="false">麥克風</button>
+  <button id="bDemo" aria-pressed="false">示範</button>
+</div>
+
+<div id="fatal" hidden>
+  <div><h2 style="font-family:var(--serif);letter-spacing:.2em">無法載入 3D</h2><p>這頁要從網路載入 Three.js。請確認電腦有連網，然後重新整理。</p></div>
+</div>
+
+<script type="module">
+const $ = id => document.getElementById(id);
+const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+const lerp = (a, b, t) => a + (b - a) * t;
+
+let THREE, OrbitControls;
+try {
+  THREE = await import('three');
+  ({ OrbitControls } = await import('three/addons/controls/OrbitControls.js'));
+} catch (err) {
+  $('fatal').hidden = false;
+  throw err;
+}
+
+// ---------- 三個軸與它們的刻度 ----------
+// X 時間（新的在右）、Y 音高、Z 亮度（頻譜重心）。大小 = 響度，墨色 = 音調↔噪音。
+const cfg = { retention: 3, minRel: 6, labelRel: 12 };
+const PITCH = { lo: 80, hi: 5000, minConf: 0.45, noteConf: 0.75, top: 1, bottom: -0.74, stripY: -0.95 };
+const BRIGHT = { lo: 200, hi: 6000 };
+const STRIP_TOP = -0.82;                       // 無音高帶的上緣
+const logN = (v, lo, hi) => clamp(Math.log(Math.max(v, lo) / lo) / Math.log(hi / lo), 0, 1);
+const pitchY = f => PITCH.bottom + (PITCH.top - PITCH.bottom) * logN(f, PITCH.lo, PITCH.hi);
+const brightZ = c => logN(c, BRIGHT.lo, BRIGHT.hi) * 2 - 1;
+const PITCH_TICKS = [[110, 'A2'], [220, 'A3'], [440, 'A4'], [880, 'A5'], [1760, 'A6'], [3520, 'A7']];
+const BRIGHT_TICKS = [250, 500, 1000, 2000, 4000];
+const fHz = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + ' kHz' : Math.round(v) + ' Hz';
+const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
+const noteName = f => { const m = Math.round(69 + 12 * Math.log2(f / 440)); return NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); };
+const kindOf = c => c >= PITCH.noteConf ? ['note', '音調'] : c >= PITCH.minConf ? ['node', '含糊音高'] : ['noise', '噪音'];
+
+// ---------- 場景 ----------
+const stage = $('stage');
+const renderer = new THREE.WebGLRenderer({ antialias: true });
+renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
+stage.appendChild(renderer.domElement);
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(36, 1, 0.05, 60);
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.minDistance = 3;
+controls.maxDistance = 20;
+controls.autoRotateSpeed = 0.5;
+
+const T = {};
+function readTokens() {
+  const s = getComputedStyle(document.documentElement);
+  for (const k of ['paper', 'ink', 'ink-2', 'ink-3', 'hair', 'axis', 'shu']) T[k] = s.getPropertyValue('--' + k).trim();
+}
+const hairMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.9 });
+const axisMat = new THREE.LineBasicMaterial();
+const stripMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.9 });
+const nowMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.7 });
+const lineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
+const ringMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
+const hoverMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
+const inkU = { value: new THREE.Color() };
+function applyTheme() {
+  readTokens();
+  scene.background = new THREE.Color(T.paper);
+  scene.fog = new THREE.Fog(new THREE.Color(T.paper), 7, 16);
+  hairMat.color.set(T.hair);
+  axisMat.color.set(T.axis);
+  stripMat.color.set(T['ink-3']);
+  nowMat.color.set(T.shu);
+  ringMat.color.set(T.shu);
+  hoverMat.color.set(T.ink);
+  inkU.value.set(T.ink);
+}
+
+// ---- 座標軸：三條細線、地板與背牆的格線、無音高帶 ----
+const axisGroup = new THREE.Group();
+scene.add(axisGroup);
+const labelEls = [];
+function addLabel(html, pos, cls = '', owner = 'axes') {
+  const el = document.createElement('div');
+  el.className = 'lbl ' + cls;
+  el.innerHTML = html;
+  $('labels').appendChild(el);
+  const l = { el, pos, owner, hidden: false, dx: 0, dy: 0 };
+  labelEls.push(l);
+  return l;
+}
+function removeLabels(owner) {
+  for (let i = labelEls.length - 1; i >= 0; i--)
+    if (labelEls[i].owner === owner) { labelEls[i].el.remove(); labelEls.splice(i, 1); }
+}
+const V = (x, y, z) => new THREE.Vector3(x, y, z);
+const seg = (a, b, mat) => new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), mat);
+function timeTicks() {
+  const r = cfg.retention;
+  const step = r <= 6 ? 1 : r <= 12 ? 2 : r <= 30 ? 5 : 10;
+  const t = [];
+  for (let s = 0; s <= r + 1e-6; s += step) t.push(s);
+  return t;
+}
+const timeX = age => (1 - clamp(age / cfg.retention, 0, 1)) * 2 - 1;
+function buildAxes() {
+  axisGroup.traverse(o => o.geometry && o.geometry.dispose());
+  axisGroup.clear();
+  removeLabels('axes');
+  const tt = timeTicks();
+  for (const a of tt) {                                // 時間：背牆直線、地板直線
+    const x = timeX(a);
+    axisGroup.add(seg(V(x, -1, -1), V(x, 1, -1), hairMat), seg(V(x, -1, -1), V(x, -1, 1), hairMat));
+    addLabel(a === 0 ? '現在' : '−' + a + ' s', V(x, -1.05, 1.08));
+  }
+  for (const [f, name] of PITCH_TICKS) {               // 音高：背牆橫線
+    const y = pitchY(f);
+    axisGroup.add(seg(V(-1, y, -1), V(1, y, -1), hairMat));
+    addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, V(-1.05, y, 1.06), 'tick');
+  }
+  for (const c of BRIGHT_TICKS) {                      // 亮度：地板橫線
+    const z = brightZ(c);
+    axisGroup.add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
+    addLabel(fHz(c).replace(' ', ''), V(1.07, -1.05, z));
+  }
+  axisGroup.add(seg(V(-1, -1, 1), V(1, -1, 1), axisMat), seg(V(-1, -1, 1), V(-1, 1, 1), axisMat), seg(V(1, -1, 1), V(1, -1, -1), axisMat));
+  axisGroup.add(seg(V(-1, STRIP_TOP, -1), V(1, STRIP_TOP, -1), stripMat));
+  axisGroup.add(seg(V(1, -1, -1), V(1, 1, -1), nowMat));
+  addLabel('現在', V(1, 1.08, -1), 'now');
+  addLabel('無音高<small>noise</small>', V(-1.05, (STRIP_TOP - 1) / 2 + 0.04, -1), 'tick');
+  addLabel('時間<small>TIME</small>', V(0, -1.2, 1.12), 'title');
+  addLabel('音高<small>PITCH</small>', V(-1.2, 1.14, 1.0), 'title');
+  addLabel('亮度<small>BRIGHTNESS</small>', V(1.9, -1.08, -0.1), 'title');
+}
+
+// ---- 點：一顆一顆的墨點，投影在地板和背牆上的淡影 ----
+const CAP = 3000;
+const pts = new Array(CAP).fill(null);
+let head = 0, segId = 0, lastT = -9, lastAdd = -9, total = 0;
+const aSize = new THREE.BufferAttribute(new Float32Array(CAP), 1).setUsage(THREE.DynamicDrawUsage);
+const aAlpha = new THREE.BufferAttribute(new Float32Array(CAP), 1).setUsage(THREE.DynamicDrawUsage);
+const posMain = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
+const posFloor = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
+const posWall = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
+const pointVert = `
+  attribute float aSize; attribute float aAlpha;
+  uniform float uScale; uniform float uSizeMul; varying float vAlpha;
+  void main() {
+    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    gl_Position = projectionMatrix * mv;
+    gl_PointSize = max(aSize * uSizeMul * uScale / -mv.z, 1.5);
+    vAlpha = aAlpha;
+  }`;
+const pointFrag = `
+  uniform vec3 uInk; uniform float uAlphaMul; varying float vAlpha;
+  void main() {
+    vec2 p = gl_PointCoord * 2.0 - 1.0;
+    float r = length(p);
+    if (r > 1.0) discard;
+    float edge = 1.0 - smoothstep(0.86, 1.0, r);
+    float wet = 0.8 + 0.2 * smoothstep(0.5, 0.92, r);      // 墨乾了邊緣比較深
+    gl_FragColor = vec4(uInk, vAlpha * uAlphaMul * edge * wet);
+  }`;
+const scaleU = { value: 800 };
+function makePoints(posAttr, sizeMul, alphaMul) {
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', posAttr); g.setAttribute('aSize', aSize); g.setAttribute('aAlpha', aAlpha);
+  const m = new THREE.ShaderMaterial({
+    transparent: true, depthWrite: false, vertexShader: pointVert, fragmentShader: pointFrag,
+    uniforms: { uScale: scaleU, uInk: inkU, uSizeMul: { value: sizeMul }, uAlphaMul: { value: alphaMul } },
+  });
+  const p = new THREE.Points(g, m);
+  p.frustumCulled = false;
+  scene.add(p);
+  return p;
+}
+makePoints(posFloor, 0.55, 0.28);
+makePoints(posWall, 0.55, 0.28);
+makePoints(posMain, 1, 1);
+
+const linePos = new Float32Array(CAP * 2 * 3), lineCol = new Float32Array(CAP * 2 * 4);
+const lineGeo = new THREE.BufferGeometry();
+lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3).setUsage(THREE.DynamicDrawUsage));
+lineGeo.setAttribute('color', new THREE.BufferAttribute(lineCol, 4).setUsage(THREE.DynamicDrawUsage));
+lineGeo.setDrawRange(0, 0);
+const lines = new THREE.LineSegments(lineGeo, lineMat);
+lines.frustumCulled = false;
+scene.add(lines);
+
+const ringTex = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 64;
+  const g = c.getContext('2d'); g.strokeStyle = '#fff'; g.lineWidth = 3;
+  g.beginPath(); g.arc(32, 32, 28, 0, Math.PI * 2); g.stroke();
+  return new THREE.CanvasTexture(c);
+})();
+ringMat.map = hoverMat.map = ringTex;
+const ring = new THREE.Sprite(ringMat), hoverRing = new THREE.Sprite(hoverMat);
+ring.visible = hoverRing.visible = false;
+ring.renderOrder = hoverRing.renderOrder = 10;
+scene.add(ring, hoverRing);
+
+// ---------- 狀態與時間（暫停時時間也停） ----------
+// paused = 按了暫停；frozen = 滑鼠指著某顆點，時間先停住讓你讀數字，移開就繼續
+let paused = false, frozen = false, holdAt = 0, shift = 0;
+const held = () => paused || frozen;
+const clock = () => (held() ? holdAt : performance.now() / 1000 - shift);
+function setHold(nextPaused, nextFrozen) {
+  const wasHeld = held(), raw = performance.now() / 1000;
+  const cur = wasHeld ? holdAt : raw - shift;
+  paused = nextPaused; frozen = nextFrozen;
+  if (held() && !wasHeld) holdAt = cur;
+  else if (!held() && wasHeld) shift = raw - holdAt;
+}
+const S = { rel: null, pitch: 0, conf: 0, cen: null, seen: -9 };
+let liveSeen = false, demo = false, showLines = true, showLabels = true, rotOn = false;
+let silent = false, silentSince = null, micOn = false;
+const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);   // 從 dashboard.py 開的才有硬體資料
+const liveText = () => micOn ? '麥克風（聲音只在你的瀏覽器裡分析）' : '即時';
+if (!isLocal) $('backLink').hidden = true;
+const segs = [];       // 每一段連續的聲音 = 一個聲音物件
+
+function onMessage(m, fromDemo = false, fromMic = false) {
+  if (m.type === 'audio' && micOn && !fromMic && !fromDemo) return;   // 開了瀏覽器的麥克風，就不聽伺服器送來的
+  if (!fromDemo && demo) stopDemo();
+  if (m.type === 'nano') {
+    if (!fromDemo && !demo && !silent) setStatus(m.connected ? (liveSeen ? 'live' : 'wait') : 'bad',
+      m.connected ? (liveSeen ? '即時' : '已連上，等聲音…') : 'Nano 斷線了，等它重新連上…');
+  } else if (m.type === 'audio') onAudio(m, fromDemo);
+}
+function onAudio(m, fromDemo) {
+  const now = performance.now() / 1000;
+  if (!fromDemo) {
+    if (!liveSeen) { liveSeen = true; setStatus('live', liveText()); }
+    if (m.db < -85) {                      // 完全的數位靜音：麥克風被靜音，或輸入音量是 0
+      silentSince ??= now;
+      if (!silent && now - silentSince > 3) { silent = true; setStatus('bad', '麥克風收到的是完全的靜音（被靜音了？輸入音量是 0？）'); }
+    } else if (silentSince !== null) {
+      silentSince = null;
+      if (silent) { silent = false; setStatus('live', liveText()); }
+    }
+  }
+  const rel = m.noise == null ? null : m.db - m.noise;
+  Object.assign(S, { rel, pitch: m.pitch_hz || 0, conf: m.pitch_conf ?? 0, cen: m.centroid, seen: now });
+  if (held() || rel == null || rel < cfg.minRel) return;
+  const t = clock();
+  if (t - lastT > 0.3) segId++;           // 安靜超過 0.3 秒 → 下一個聲音物件，連線在這裡斷開
+  lastT = t;
+  if (t - lastAdd < 0.04) return;         // 取樣太密的話點會糊成一條，每 40 毫秒留一顆
+  lastAdd = t;
+  const slot = head;
+  head = (head + 1) % CAP;
+  const conf = clamp(m.pitch_conf ?? 0, 0, 1);
+  const p = { slot, t, seg: segId, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0,
+              pitched: (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf, x: 0, y: 0, z: 0, d: 0, fade: 1 };
+  pts[slot] = p;
+  total++;
+  let s = segs[segs.length - 1];
+  if (!s || s.id !== segId) { s = { id: segId, t0: t, t1: t, n: 0, sumConf: 0, ref: p, max: -1, l: null }; segs.push(s); }
+  s.n++; s.sumConf += conf; s.t1 = t;
+  if (rel > s.max) { s.max = rel; s.ref = p; }
+  if (s.max >= cfg.labelRel && !s.l) {
+    s.l = addLabel('', V(0, 0, 0), 'obj', 'obj');
+    while (segs.filter(x => x.l).length > 30) removeObjLabel(segs.find(x => x.l));
+  }
+  if (s.l) {
+    const [en, zh] = kindOf(s.sumConf / s.n);
+    s.l.el.innerHTML = `${zh}<small>${en} · ${(s.t1 - s.t0).toFixed(2)} s</small>`;
+  }
+}
+function removeObjLabel(s) {
+  if (!s.l) return;
+  s.l.el.remove();
+  labelEls.splice(labelEls.indexOf(s.l), 1);
+  s.l = null;
+}
+function clearAll() {
+  pts.fill(null); head = 0; total = 0;
+  aAlpha.array.fill(0); aAlpha.needsUpdate = true;
+  for (const s of segs) removeObjLabel(s);
+  segs.length = 0;
+  lineGeo.setDrawRange(0, 0);
+}
+
+// ---------- 畫面上的數字、狀態 ----------
+function setStatus(cls, text) { $('status').className = 'status ' + cls; $('statusText').textContent = text; }
+function updateNow(now, alive) {
+  const fresh = now - S.seen < 1.5 && S.rel != null && S.rel >= cfg.minRel;
+  $('nPitch').textContent = fresh ? (S.pitch > 0 && S.conf >= PITCH.minConf ? Math.round(S.pitch) + ' Hz · ' + noteName(S.pitch) : '無明確音高') : '–';
+  $('nCen').textContent = fresh ? fHz(S.cen) : '–';
+  $('nRel').textContent = S.rel != null && now - S.seen < 1.5 ? (S.rel >= 0 ? '+' : '') + S.rel.toFixed(0) + ' dB' : '–';
+  $('nCount').textContent = alive;
+}
+
+// ---------- 主迴圈 ----------
+const _v = new THREE.Vector3();
+let pointer = null, hoverSlot = -1, userDrag = false, rotTimer = 0, scalePx = 800;
+let lastRaf = performance.now(), hudAcc = 0;
+const inkRGB = new THREE.Color();
+
+function animate(tms) {
+  const dt = Math.min(0.05, (tms - lastRaf) / 1000);
+  lastRaf = tms;
+  const now = clock(), ret = cfg.retention;
+  const w = stage.clientWidth, h = stage.clientHeight;
+  controls.autoRotate = rotOn && !pointer && !userDrag;
+  controls.update();
+
+  let alive = 0, nSeg = 0, prev = null, latest = null, best = null, bestD = 1e9;
+  inkRGB.set(T['ink-3']);
+  const A = aAlpha.array, Z = aSize.array, M = posMain.array, F = posFloor.array, W = posWall.array;
+  for (let k = 0; k < CAP; k++) {
+    const slot = (head + k) % CAP;           // 從最舊到最新
+    const p = pts[slot];
+    if (!p) { A[slot] = 0; continue; }
+    const age = now - p.t;
+    if (age > ret) { pts[slot] = null; A[slot] = 0; prev = null; continue; }
+    p.x = timeX(age);
+    p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;     // 沒有音高的沉在底部，越接近有音高越靠上
+    p.z = brightZ(p.cen);
+    const fade = clamp((ret - age) / (ret * 0.25), 0, 1);
+    const pop = age < 0.2 ? 0.5 + 0.5 * (1 - Math.pow(1 - age / 0.2, 3)) : 1;
+    p.fade = fade;
+    p.d = (0.02 + 0.085 * Math.pow(clamp(p.rel / 40, 0, 1), 1.2)) * fade * pop;
+    Z[slot] = p.d;
+    A[slot] = lerp(0.12, 0.62, p.conf) * fade;
+    M[slot * 3] = p.x; M[slot * 3 + 1] = p.y; M[slot * 3 + 2] = p.z;
+    F[slot * 3] = p.x; F[slot * 3 + 1] = -1; F[slot * 3 + 2] = p.z;
+    W[slot * 3] = p.x; W[slot * 3 + 1] = p.y; W[slot * 3 + 2] = -1;
+    alive++;
+    if (showLines && prev && prev.seg === p.seg) {
+      const a = 0.45 * Math.min(fade, prev.fade);
+      const i = nSeg * 2;
+      linePos.set([prev.x, prev.y, prev.z, p.x, p.y, p.z], i * 3);
+      lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
+      nSeg++;
+    }
+    prev = p; latest = p;
+    if (pointer) {
+      _v.set(p.x, p.y, p.z).project(camera);
+      if (_v.z < 1 && fade > 0.1) {
+        const sx = (_v.x * 0.5 + 0.5) * w, sy = (-_v.y * 0.5 + 0.5) * h;
+        const dist = camera.position.distanceTo(_v.set(p.x, p.y, p.z));
+        const rpx = Math.max(p.d * scalePx / dist / 2 / renderer.getPixelRatio(), 2);
+        const d = Math.hypot(sx - pointer.x, sy - pointer.y) - rpx;
+        if (d < 8 && d < bestD) { bestD = d; best = p; }
+      }
+    }
+  }
+  for (const a of [aAlpha, aSize, posMain, posFloor, posWall]) a.needsUpdate = true;
+  lineGeo.setDrawRange(0, nSeg * 2);
+  lineGeo.attributes.position.needsUpdate = true;
+  lineGeo.attributes.color.needsUpdate = true;
+  lines.visible = showLines;
+
+  // 最新的一顆套一圈朱
+  if (latest && !held() && now - latest.t < 1.2) {
+    ring.visible = true;
+    ring.position.set(latest.x, latest.y, latest.z);
+    ring.scale.setScalar(latest.d + 0.05);
+    ringMat.opacity = 0.9 * (1 - (now - latest.t) / 1.2);
+  } else ring.visible = false;
+
+  // 指到的那顆：時間先停住，才讀得到數字
+  hoverSlot = best ? best.slot : -1;
+  if (!!best !== frozen) setHold(paused, !!best);
+  const tip = $('tip');
+  if (best && pointer) {
+    hoverRing.visible = true;
+    hoverRing.position.set(best.x, best.y, best.z);
+    hoverRing.scale.setScalar(best.d + 0.04);
+    hoverMat.opacity = 0.8;
+    const [en, zh] = kindOf(best.conf);
+    tip.style.display = 'block';
+    tip.innerHTML = `<div class="t">${zh} <span class="m">${en}</span></div>` +
+      `<span class="m">音高</span>${best.pitched ? Math.round(best.pitch) + ' Hz · ' + noteName(best.pitch) : '無明確音高'}<br>` +
+      `<span class="m">亮度</span>${fHz(best.cen)}<br>` +
+      `<span class="m">響度</span>+${best.rel.toFixed(1)} dB（${best.rms.toFixed(3)}）<br>` +
+      `<span class="m">音調度</span>${best.conf.toFixed(2)}<br><span class="m">${(now - best.t).toFixed(1)} 秒前</span>`;
+    const tw = tip.offsetWidth;
+    tip.style.left = Math.min(pointer.cx + 16, innerWidth - tw - 8) + 'px';
+    tip.style.top = (pointer.cy + 16) + 'px';
+  } else { tip.style.display = 'none'; hoverRing.visible = false; }
+
+  // 聲音物件的標籤：標在最大聲的那顆
+  for (let i = segs.length - 1; i >= 0; i--) {
+    const s = segs[i];
+    if (pts[s.ref.slot] !== s.ref) { removeObjLabel(s); segs.splice(i, 1); continue; }
+    if (s.l) { s.l.pos.set(s.ref.x, s.ref.y + s.ref.d * 0.5 + 0.05, s.ref.z); s.l.hidden = !showLabels || s.ref.fade < 0.35; }
+  }
+
+  hudAcc += dt;
+  if (hudAcc > 0.1) { hudAcc = 0; updateNow(performance.now() / 1000, alive); }
+  for (const l of labelEls) {
+    _v.copy(l.pos).project(camera);
+    if (l.hidden || _v.z > 1) { l.el.style.display = 'none'; continue; }
+    l.el.style.display = '';
+    l.el.style.transform = `translate(${(_v.x * 0.5 + 0.5) * w}px, ${(-_v.y * 0.5 + 0.5) * h}px) translate(-50%, -100%)`;
+  }
+  renderer.render(scene, camera);
+  requestAnimationFrame(animate);
+}
+
+// ---------- 操作 ----------
+controls.addEventListener('start', () => { userDrag = true; clearTimeout(rotTimer); });
+controls.addEventListener('end', () => { rotTimer = setTimeout(() => { userDrag = false; }, 3000); });
+renderer.domElement.addEventListener('pointermove', e => {
+  const r = renderer.domElement.getBoundingClientRect();
+  pointer = { x: e.clientX - r.left, y: e.clientY - r.top, cx: e.clientX, cy: e.clientY };
+});
+renderer.domElement.addEventListener('pointerleave', () => { pointer = null; });
+function toggle(id, get, set) {
+  $(id).addEventListener('click', () => { const v = !get(); set(v); $(id).setAttribute('aria-pressed', String(v)); });
+}
+toggle('bRot', () => rotOn, v => { rotOn = v; });
+toggle('bLine', () => showLines, v => { showLines = v; });
+toggle('bLbl', () => showLabels, v => { showLabels = v; });
+toggle('bPause', () => paused, v => {
+  setHold(v, frozen);
+  $('bPause').textContent = v ? '繼續' : '暫停';
+});
+$('bClear').addEventListener('click', clearAll);
+$('rRet').addEventListener('input', e => { cfg.retention = +e.target.value; $('oRet').textContent = cfg.retention + ' 秒'; buildAxes(); });
+$('rMin').addEventListener('input', e => { cfg.minRel = +e.target.value; $('oMin').textContent = cfg.minRel + ' dB'; });
+if (matchMedia('(max-width: 760px)').matches) $('theory').open = false;
+
+function resize() {
+  const w = stage.clientWidth, h = stage.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.fov = camera.aspect < 0.8 ? 55 : 36;      // 直向的手機用廣角，方塊才不會縮成一小塊
+  camera.updateProjectionMatrix();
+  scalePx = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(camera.fov * Math.PI / 360));
+  scaleU.value = scalePx;
+}
+new ResizeObserver(resize).observe(stage);
+function homeCamera() {
+  const k = camera.aspect < 0.8 ? clamp(0.7 / camera.aspect, 1, 2.2) : 1;
+  camera.position.set(2.3 * k, 1.0 * k, 5.2 * k);
+  controls.target.set(0, -0.2, 0);
+}
+
+// ---------- 示範：沒有硬體也能看（母音、鳥叫、嘶聲、悶響、含糊的音） ----------
+let demoToken = 0;
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+function startDemo() {
+  if (demo) return;
+  demo = true;
+  const token = ++demoToken;
+  $('bDemo').setAttribute('aria-pressed', 'true');
+  setStatus('demo', isLocal ? '示範（模擬的聲音，沒有接硬體）' : '示範（模擬的聲音）。按下面的「麥克風」，換成你自己的聲音');
+  demoLoop(token);
+}
+function stopDemo() {
+  if (!demo) return;
+  demo = false; demoToken++;
+  $('bDemo').setAttribute('aria-pressed', 'false');
+  setStatus(liveSeen ? 'live' : 'wait', liveSeen ? liveText() : '等資料…');
+}
+$('bDemo').addEventListener('click', () => demo ? stopDemo() : startDemo());
+
+async function demoLoop(token) {
+  const alive = () => demo && token === demoToken;
+  const NOISE = -52, rnd = (a, b) => a + Math.random() * (b - a);
+  const KINDS = {
+    vowel: u => ({ pitch: lerp(rnd(110, 170), rnd(150, 260), u), conf: rnd(0.85, 0.98), cen: rnd(500, 1800), rel: rnd(16, 32) }),
+    chirp: u => { const f = lerp(rnd(2000, 3000), rnd(3200, 4800), u); return { pitch: f, conf: rnd(0.8, 0.95), cen: f * rnd(0.95, 1.05), rel: rnd(12, 28) }; },
+    hiss:  () => ({ pitch: 0, conf: rnd(0.05, 0.25), cen: rnd(3800, 5500), rel: rnd(8, 22) }),
+    thump: () => ({ pitch: rnd(70, 110), conf: rnd(0.2, 0.4), cen: rnd(300, 700), rel: rnd(20, 34) }),
+    hum:   u => ({ pitch: lerp(rnd(200, 300), rnd(280, 420), u), conf: rnd(0.5, 0.7), cen: rnd(800, 1500), rel: rnd(12, 24) }),
+  };
+  const frame = async (secs, kind) => {
+    for (let t = 0; t < secs && alive(); t += 0.03) {
+      const u = secs ? t / secs : 0, env = Math.pow(Math.sin(Math.PI * Math.min(1, u)), 0.6);
+      let m;
+      if (kind) {
+        const f = KINDS[kind](u);
+        m = { type: 'audio', db: NOISE + f.rel * env, noise: NOISE, centroid: Math.round(f.cen), pitch_hz: +f.pitch.toFixed(1),
+              pitch_conf: +f.conf.toFixed(2), rms: +(0.002 + 0.07 * env * f.rel / 34).toFixed(4) };
+      } else m = { type: 'audio', db: NOISE + rnd(0, 2), noise: NOISE, centroid: 500, pitch_hz: 0, pitch_conf: 0.05, rms: 0.002 };
+      onMessage(m, true);
+      await sleep(30);
+    }
+  };
+  const order = ['vowel', 'chirp', 'hiss', 'thump', 'hum'];
+  while (alive()) {
+    const kinds = Array.from({ length: 3 + Math.floor(Math.random() * 3) }, () => order[Math.floor(Math.random() * order.length)]);
+    for (const k of kinds) {
+      await frame(rnd(0.15, 0.45), k);
+      await frame(rnd(0.15, 0.4), null);
+    }
+    await frame(rnd(0.5, 1.2), null);
+  }
+}
+
+// ---------- 用這台電腦的麥克風：在瀏覽器裡直接分析（和 dashboard.py 同一套算法），不會傳到任何地方 ----------
+const mic = { ctx: null, stream: null, an: null, timer: 0, time: null, spec: null, work: null, warm: [], floor: null };
+function pitchOf(x, fs, fmax) {             // x 要先去掉直流；回傳 [音高 Hz, 週期性 0～1]
+  const n = x.length;
+  let mx = 0;
+  for (let i = 0; i < n; i++) mx = Math.max(mx, Math.abs(x[i]));
+  if (mx < 1e-4) return [0, 0];
+  let lo = Math.max(Math.floor(fs / fmax), 2);
+  const hi = Math.min(Math.floor(fs / 70), n >> 1);
+  if (hi <= lo + 2) return [0, 0];
+  const ac = new Float32Array(hi + 2);      // 自相關
+  for (let k = 0; k <= hi + 1; k++) { let sum = 0; for (let i = 0; i + k < n; i++) sum += x[i] * x[i + k]; ac[k] = sum; }
+  const a0 = ac[0] + 1e-12;
+  for (let k = 0; k <= hi + 1; k++) ac[k] = ac[k] / a0 * n / (n - k);   // 正規化，並補償越長的延遲重疊越少
+  let first = -1;                           // 平滑的訊號（悶響、風聲）要等自相關第一次降到 0 以下才算數
+  for (let i = lo; i < hi; i++) if (ac[i] <= 0) { first = i; break; }
+  if (first < 0) return [0, 0];
+  lo = first;
+  if (hi <= lo + 2) return [0, 0];
+  let km = lo;
+  for (let i = lo; i < hi; i++) if (ac[i] > ac[km]) km = i;
+  let peak = ac[km];
+  for (let i = lo + 1; i < km; i++)         // 避免抓到 2 倍週期：往前找第一個夠高的局部峰
+    if (ac[i] > ac[i - 1] && ac[i] >= ac[i + 1] && ac[i] >= 0.85 * peak) { km = i; peak = ac[i]; break; }
+  const a = ac[km - 1], b = ac[km], c = ac[km + 1], d = a - 2 * b + c;
+  const shift = Math.abs(d) > 1e-12 ? clamp(0.5 * (a - c) / d, -1, 1) : 0;
+  return [fs / (km + shift), clamp(peak, 0, 1)];
+}
+function noiseUpdate(db) {                  // 背景噪音：一開始量 20 次取中位數，之後慢慢跟著環境走
+  if (mic.floor === null) {
+    mic.warm.push(db);
+    if (mic.warm.length >= 20) { const s = [...mic.warm].sort((p, q) => p - q); mic.floor = s[s.length >> 1]; setStatus('live', liveText()); }
+  } else if (db < mic.floor + 3) mic.floor = 0.95 * mic.floor + 0.05 * db;
+  else mic.floor += 0.002;
+  return mic.floor;
+}
+function micTick() {
+  if (!mic.an) return;
+  const sr = mic.ctx.sampleRate, N = 1024;
+  mic.an.getFloatTimeDomainData(mic.time);
+  const x = mic.time.subarray(mic.time.length - N);
+  let mean = 0;
+  for (let i = 0; i < N; i++) mean += x[i];
+  mean /= N;
+  let sq = 0;
+  for (let i = 0; i < N; i++) { const v = x[i] - mean; mic.work[i] = v; sq += v * v; }
+  const rms = Math.sqrt(sq / N), db = 20 * Math.log10(rms + 1e-9);
+  mic.an.getFloatFrequencyData(mic.spec);
+  const df = sr / mic.an.fftSize;
+  let sw = 0, sm = 0;
+  for (let i = Math.ceil(80 / df); i < mic.spec.length && i * df < 8000; i++) { const m = Math.pow(10, mic.spec[i] / 20); sw += m * i * df; sm += m; }
+  const [f0, conf] = pitchOf(mic.work, sr, Math.min(4000, sr / 6));
+  const floor = noiseUpdate(db);
+  onMessage({ type: 'audio', db, noise: floor, centroid: Math.round(sm > 0 ? sw / sm : 0),
+              pitch_hz: +f0.toFixed(1), pitch_conf: +conf.toFixed(2), rms: +rms.toFixed(4) }, false, true);
+}
+async function startMic() {
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setStatus('bad', '這個瀏覽器不能用麥克風（網址要是 https）'); return;
+  }
+  try {
+    mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
+  } catch (err) {
+    setStatus('bad', err && err.name === 'NotAllowedError' ? '沒有麥克風權限：請在網址列允許，再按一次「麥克風」' : '找不到可用的麥克風（' + (err && err.name) + '）');
+    return;
+  }
+  mic.ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await mic.ctx.resume();
+  mic.an = mic.ctx.createAnalyser();
+  mic.an.fftSize = 2048;
+  mic.an.smoothingTimeConstant = 0;
+  mic.ctx.createMediaStreamSource(mic.stream).connect(mic.an);   // 不接到喇叭，才不會回授
+  mic.time = new Float32Array(mic.an.fftSize);
+  mic.spec = new Float32Array(mic.an.frequencyBinCount);
+  mic.work = new Float32Array(1024);
+  mic.warm = []; mic.floor = null;
+  micOn = true; liveSeen = false; silent = false; silentSince = null;
+  $('bMic').setAttribute('aria-pressed', 'true');
+  if (demo) stopDemo();
+  setStatus('wait', '校正背景噪音，請安靜一下…');
+  mic.timer = setInterval(micTick, 30);
+}
+function stopMic() {
+  micOn = false;
+  clearInterval(mic.timer);
+  if (mic.stream) mic.stream.getTracks().forEach(t => t.stop());
+  if (mic.ctx) mic.ctx.close();
+  mic.ctx = mic.stream = mic.an = null;
+  $('bMic').setAttribute('aria-pressed', 'false');
+  liveSeen = false; silent = false; silentSince = null;
+  setStatus('wait', '麥克風已關閉');
+  if (!isLocal) startDemo();               // 公開網站沒有別的資料來源，回到示範
+}
+$('bMic').addEventListener('click', () => micOn ? stopMic() : startMic());
+
+// ---------- 連到 dashboard.py ----------
+function connect() {
+  const forced = new URLSearchParams(location.search).has('demo');
+  // 不是從 dashboard.py 開的（雙擊檔案、或預覽視窗的 data: 網址）就沒有資料可連，直接示範
+  if (!isLocal || !/^https?:$/.test(location.protocol) || forced) { startDemo(); return; }
+  let es;
+  try { es = new EventSource('/stream'); } catch (err) { startDemo(); return; }
+  es.onopen = () => { if (!demo) setStatus('wait', '已連上，等聲音…'); };
+  es.onerror = () => {
+    if (demo) return;
+    setStatus('bad', '連不上 dashboard.py（有在跑嗎？）');
+    setTimeout(() => { if (!liveSeen && !demo) startDemo(); }, 2000);
+  };
+  es.onmessage = e => onMessage(JSON.parse(e.data));
+}
+
+applyTheme();
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+buildAxes();
+resize();
+homeCamera();
+window.__viz = { onMessage, startDemo, stopDemo, cfg, pts, camera, controls, renderer, scene, segs, animate, held, pitchOf, micTick, mic };   // 方便在瀏覽器主控台除錯
+requestAnimationFrame(animate);   // 先啟動畫面，連線出任何問題都不會讓畫面空白
+connect();
+</script>
+</body>
+</html>
