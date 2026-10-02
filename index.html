@@ -168,7 +168,7 @@
     <label class="set">保留<input type="range" id="rRet" min="1" max="60" step="1" value="3"><output id="oRet">3 秒</output></label>
     <label class="set">最小響度<input type="range" id="rMin" min="2" max="25" step="1" value="6"><output id="oMin">6 dB</output></label>
     <p class="note">這是依文獻做的設計對照，軸的選擇是詮釋，不等於這些文獻自己用的軸。</p>
-    <p class="note">按「麥克風」會用你這台電腦的麥克風。聲音只在你的瀏覽器裡分析，不會傳到任何地方。</p>
+    <p class="note">按「開始」：有接 MAX9814（接在 Nano 或 Pico 上，用 USB 連電腦）就用它，找不到就用這台電腦的麥克風。聲音只在你的瀏覽器裡分析，不會傳到任何地方。第一次接 MAX9814 要按「接 MAX9814」選一次裝置，之後會自動接上（瀏覽器的安全規定，只有 Chrome、Edge 能用）。</p>
   </details>
 </aside>
 
@@ -183,7 +183,8 @@
   <button id="bRot" aria-pressed="false">旋轉</button>
   <button id="bLine" aria-pressed="true">連線</button>
   <button id="bLbl" aria-pressed="true">標籤</button>
-  <button id="bMic" aria-pressed="false">麥克風</button>
+  <button id="bStart" aria-pressed="false">開始</button>
+  <button id="bUsb">接 MAX9814</button>
   <button id="bDemo" aria-pressed="false">示範</button>
 </div>
 
@@ -399,7 +400,7 @@ const S = { rel: null, pitch: 0, conf: 0, cen: null, seen: -9 };
 let liveSeen = false, demo = false, showLines = true, showLabels = true, rotOn = false;
 let silent = false, silentSince = null, micOn = false;
 const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);   // 從 dashboard.py 開的才有硬體資料
-const liveText = () => micOn ? '麥克風（聲音只在你的瀏覽器裡分析）' : '即時';
+const liveText = () => micOn ? srcName + '（聲音只在你的瀏覽器裡分析）' : '即時';
 if (!isLocal) $('backLink').hidden = true;
 const segs = [];       // 每一段連續的聲音 = 一個聲音物件
 
@@ -631,7 +632,7 @@ function startDemo() {
   demo = true;
   const token = ++demoToken;
   $('bDemo').setAttribute('aria-pressed', 'true');
-  setStatus('demo', isLocal ? '示範（模擬的聲音，沒有接硬體）' : '示範（模擬的聲音）。按下面的「麥克風」，換成你自己的聲音');
+  setStatus('demo', isLocal ? '示範（模擬的聲音，沒有接硬體）' : '示範（模擬的聲音）。按下面的「開始」，換成你自己的聲音');
   demoLoop(token);
 }
 function stopDemo() {
@@ -676,8 +677,32 @@ async function demoLoop(token) {
   }
 }
 
-// ---------- 用這台電腦的麥克風：在瀏覽器裡直接分析（和 dashboard.py 同一套算法），不會傳到任何地方 ----------
-const mic = { ctx: null, stream: null, an: null, timer: 0, time: null, spec: null, work: null, warm: [], floor: null };
+// ---------- 收音：MAX9814（接在 Nano 或 Pico 上，用 USB）優先，沒有就用這台電腦的麥克風 ----------
+// 全部在瀏覽器裡分析（和 dashboard.py 同一套算法），聲音不會傳到任何地方。
+const mic = { ctx: null, stream: null, an: null, timer: 0, time: null, warm: [], floor: null };   // 也負責背景噪音的追蹤
+let ser = null, srcName = '';
+const NANO_FS = 16e6 / 64 / 13, PICO_FS = 48000;       // 要和 nano_gun／pico_mic 的程式一致
+const MAGIC = [0xA5, 0x5A, 0xA5, 0x5A], PICO_FRAMES = 256;
+const USB_FILTERS = [{ usbVendorId: 0x1A86 }, { usbVendorId: 0x2341 }, { usbVendorId: 0x0403 }, { usbVendorId: 0x2E8A }];  // CH340、Arduino、FTDI、Pico
+const work = new Float32Array(1024);
+
+// 1024 點 FFT（算亮度用）
+const FFT_N = 1024;
+const fftRe = new Float32Array(FFT_N), fftIm = new Float32Array(FFT_N);
+const hann = Float32Array.from({ length: FFT_N }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FFT_N - 1)));
+const bitrev = (() => { const r = new Uint16Array(FFT_N), bits = Math.log2(FFT_N); for (let i = 0; i < FFT_N; i++) { let x = i, y = 0; for (let b = 0; b < bits; b++) { y = (y << 1) | (x & 1); x >>= 1; } r[i] = y; } return r; })();
+const cosT = Float32Array.from({ length: FFT_N / 2 }, (_, i) => Math.cos(2 * Math.PI * i / FFT_N));
+const sinT = Float32Array.from({ length: FFT_N / 2 }, (_, i) => Math.sin(2 * Math.PI * i / FFT_N));
+function fft() {
+  for (let size = 2; size <= FFT_N; size <<= 1) {
+    const half = size >> 1, step = FFT_N / size;
+    for (let i = 0; i < FFT_N; i += size) for (let j = 0, k = 0; j < half; j++, k += step) {
+      const a = i + j, b = a + half, c = cosT[k], sn = sinT[k];
+      const tr = fftRe[b] * c + fftIm[b] * sn, ti = fftIm[b] * c - fftRe[b] * sn;
+      fftRe[b] = fftRe[a] - tr; fftIm[b] = fftIm[a] - ti; fftRe[a] += tr; fftIm[a] += ti;
+    }
+  }
+}
 function pitchOf(x, fs, fmax) {             // x 要先去掉直流；回傳 [音高 Hz, 週期性 0～1]
   const n = x.length;
   let mx = 0;
@@ -712,35 +737,53 @@ function noiseUpdate(db) {                  // 背景噪音：一開始量 20 �
   else mic.floor += 0.002;
   return mic.floor;
 }
-function micTick() {
-  if (!mic.an) return;
-  const sr = mic.ctx.sampleRate, N = 1024;
-  mic.an.getFloatTimeDomainData(mic.time);
-  const x = mic.time.subarray(mic.time.length - N);
+function analyseBlock(x, fs) {              // x：最近 1024 個取樣（-1～1），回傳一筆和 dashboard.py 一樣的聲音資料
+  const N = FFT_N;
   let mean = 0;
   for (let i = 0; i < N; i++) mean += x[i];
   mean /= N;
   let sq = 0;
-  for (let i = 0; i < N; i++) { const v = x[i] - mean; mic.work[i] = v; sq += v * v; }
+  for (let i = 0; i < N; i++) { const v = x[i] - mean; work[i] = v; sq += v * v; }
   const rms = Math.sqrt(sq / N), db = 20 * Math.log10(rms + 1e-9);
-  mic.an.getFloatFrequencyData(mic.spec);
-  const df = sr / mic.an.fftSize;
+  for (let i = 0; i < N; i++) { fftRe[bitrev[i]] = work[i] * hann[i]; fftIm[bitrev[i]] = 0; }
+  fft();
+  const df = fs / N;
   let sw = 0, sm = 0;
-  for (let i = Math.ceil(80 / df); i < mic.spec.length && i * df < 8000; i++) { const m = Math.pow(10, mic.spec[i] / 20); sw += m * i * df; sm += m; }
-  const [f0, conf] = pitchOf(mic.work, sr, Math.min(4000, sr / 6));
-  const floor = noiseUpdate(db);
-  onMessage({ type: 'audio', db, noise: floor, centroid: Math.round(sm > 0 ? sw / sm : 0),
-              pitch_hz: +f0.toFixed(1), pitch_conf: +conf.toFixed(2), rms: +rms.toFixed(4) }, false, true);
+  for (let i = Math.ceil(80 / df); i < N / 2 && i * df < 8000; i++) { const m = Math.hypot(fftRe[i], fftIm[i]); sw += m * i * df; sm += m; }
+  const [f0, conf] = pitchOf(work, fs, Math.min(4000, fs / 6));
+  return { db, rms, centroid: Math.round(sm > 0 ? sw / sm : 0), pitch_hz: +f0.toFixed(1), pitch_conf: +conf.toFixed(2) };
+}
+function emit(x, fs) {
+  const a = analyseBlock(x, fs);
+  onMessage({ type: 'audio', db: a.db, noise: noiseUpdate(a.db), centroid: a.centroid, pitch_hz: a.pitch_hz,
+              pitch_conf: a.pitch_conf, rms: +a.rms.toFixed(4) }, false, true);
+}
+function beginSource(name) {                // 某個收音來源開始了
+  srcName = name;
+  micOn = true; liveSeen = false; silent = false; silentSince = null;
+  mic.warm = []; mic.floor = null;
+  $('bStart').setAttribute('aria-pressed', 'true');
+  $('bStart').textContent = '停止';
+  if (demo) stopDemo();
+  setStatus('wait', '校正背景噪音，請安靜一下…');
+}
+
+// ---- 電腦的麥克風 ----
+function micTick() {
+  if (!mic.an) return;
+  mic.an.getFloatTimeDomainData(mic.time);
+  emit(mic.time.subarray(mic.time.length - FFT_N), mic.ctx.sampleRate);
 }
 async function startMic() {
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-    setStatus('bad', '這個瀏覽器不能用麥克風（網址要是 https）'); return;
+    setStatus('bad', '這個瀏覽器不能用麥克風（網址要是 https）'); await stopAll(false); return false;
   }
   try {
     mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   } catch (err) {
-    setStatus('bad', err && err.name === 'NotAllowedError' ? '沒有麥克風權限：請在網址列允許，再按一次「麥克風」' : '找不到可用的麥克風（' + (err && err.name) + '）');
-    return;
+    setStatus('bad', err && err.name === 'NotAllowedError' ? '沒有麥克風權限：請在網址列允許，再按一次「開始」' : '找不到可用的麥克風（' + (err && err.name) + '）');
+    await stopAll(false);
+    return false;
   }
   mic.ctx = new (window.AudioContext || window.webkitAudioContext)();
   await mic.ctx.resume();
@@ -749,27 +792,120 @@ async function startMic() {
   mic.an.smoothingTimeConstant = 0;
   mic.ctx.createMediaStreamSource(mic.stream).connect(mic.an);   // 不接到喇叭，才不會回授
   mic.time = new Float32Array(mic.an.fftSize);
-  mic.spec = new Float32Array(mic.an.frequencyBinCount);
-  mic.work = new Float32Array(1024);
-  mic.warm = []; mic.floor = null;
-  micOn = true; liveSeen = false; silent = false; silentSince = null;
-  $('bMic').setAttribute('aria-pressed', 'true');
-  if (demo) stopDemo();
-  setStatus('wait', '校正背景噪音，請安靜一下…');
+  beginSource('電腦麥克風');
   mic.timer = setInterval(micTick, 30);
+  return true;
 }
-function stopMic() {
-  micOn = false;
+
+// ---- MAX9814：Nano 每個位元組是一個取樣；Pico 是一包一包的立體聲 ----
+function pushSample(v) { ser.ring[ser.w] = v; ser.w = (ser.w + 1) % ser.ring.length; ser.count++; }
+function feedNano(chunk) { for (let i = 0; i < chunk.length; i++) pushSample((chunk[i] - 128) / 128); }
+function feedPico(chunk) {
+  const old = ser.pending, m = new Uint8Array(old.length + chunk.length);
+  m.set(old); m.set(chunk, old.length);
+  let i = 0;
+  for (;;) {
+    let j = -1;
+    for (let k = i; k + 4 <= m.length; k++) if (m[k] === MAGIC[0] && m[k + 1] === MAGIC[1] && m[k + 2] === MAGIC[2] && m[k + 3] === MAGIC[3]) { j = k; break; }
+    if (j < 0) { i = Math.max(i, m.length - 3); break; }
+    if (m.length < j + 4 + PICO_FRAMES * 4) { i = j; break; }
+    const dv = new DataView(m.buffer, m.byteOffset + j + 4, PICO_FRAMES * 4);
+    for (let f = 0; f < PICO_FRAMES; f++) pushSample((dv.getInt16(f * 4, true) + dv.getInt16(f * 4 + 2, true)) / 65536);   // 左右取平均
+    i = j + 4 + PICO_FRAMES * 4;
+  }
+  ser.pending = m.slice(i);
+}
+function serTick() {
+  if (!ser || ser.count < FFT_N) return;
+  const R = ser.ring.length;
+  for (let i = 0; i < FFT_N; i++) ser.tmp[i] = ser.ring[(ser.w - FFT_N + i + R) % R];
+  emit(ser.tmp, ser.fs);
+}
+async function startSerial(port) {          // 成功接上回傳 true
+  const info = port.getInfo ? port.getInfo() : {};
+  const pico = info.usbVendorId === 0x2E8A;
+  try { await port.open({ baudRate: 500000 }); } catch (e) { return false; }
+  const s = { port, kind: pico ? 'pico' : 'nano', fs: pico ? PICO_FS : NANO_FS, ring: new Float32Array(16384), w: 0, count: 0,
+              tmp: new Float32Array(FFT_N), pending: new Uint8Array(0), bytes: 0, closing: false, reader: null, timer: 0, watch: 0 };
+  ser = s;
+  s.reader = port.readable.getReader();
+  beginSource(pico ? 'MAX9814（Pico）' : 'MAX9814（Nano）');
+  (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await s.reader.read();
+        if (done) break;
+        s.bytes += value.length;
+        if (s.kind === 'pico') feedPico(value); else feedNano(value);
+      }
+    } catch (e) { /* 拔掉了 */ }
+    if (ser === s && !s.closing) onSerialLost('MAX9814 斷線了，改用電腦麥克風…');
+  })();
+  if (!pico) {                              // Nano 開序列埠會重開機，等它開好再叫它開始傳聲音
+    await new Promise(r => setTimeout(r, 2100));
+    if (ser !== s) return true;
+    try { const w = port.writable.getWriter(); await w.write(new TextEncoder().encode('A1\n')); w.releaseLock(); } catch (e) {}
+  }
+  s.timer = setInterval(serTick, 40);
+  s.watch = setTimeout(() => { if (ser === s && s.bytes === 0) onSerialLost('這個裝置沒有送出聲音，改用電腦麥克風…'); }, 5000);
+  return true;
+}
+async function closeSerial() {
+  if (!ser) return;
+  const s = ser;
+  ser = null; s.closing = true;
+  clearInterval(s.timer); clearTimeout(s.watch);
+  if (s.kind === 'nano') { try { const w = s.port.writable.getWriter(); await w.write(new TextEncoder().encode('A0\n')); w.releaseLock(); } catch (e) {} }
+  try { await s.reader.cancel(); } catch (e) {}
+  try { s.reader.releaseLock(); } catch (e) {}
+  try { await s.port.close(); } catch (e) {}
+}
+async function onSerialLost(msg) {          // MAX9814 沒了 → 找電腦麥克風
+  await closeSerial();
+  setStatus('wait', msg);
+  await startMic();
+}
+if ('serial' in navigator) navigator.serial.addEventListener('disconnect', e => { if (ser && e.target === ser.port) onSerialLost('MAX9814 斷線了，改用電腦麥克風…'); });
+
+// ---- 開始、停止 ----
+async function stopSource() {
   clearInterval(mic.timer);
   if (mic.stream) mic.stream.getTracks().forEach(t => t.stop());
-  if (mic.ctx) mic.ctx.close();
+  if (mic.ctx) { try { await mic.ctx.close(); } catch (e) {} }
   mic.ctx = mic.stream = mic.an = null;
-  $('bMic').setAttribute('aria-pressed', 'false');
-  liveSeen = false; silent = false; silentSince = null;
-  setStatus('wait', '麥克風已關閉');
-  if (!isLocal) startDemo();               // 公開網站沒有別的資料來源，回到示範
+  await closeSerial();
+  micOn = false;
 }
-$('bMic').addEventListener('click', () => micOn ? stopMic() : startMic());
+async function stopAll(announce = true) {
+  await stopSource();
+  $('bStart').setAttribute('aria-pressed', 'false');
+  $('bStart').textContent = '開始';
+  liveSeen = false; silent = false; silentSince = null;
+  if (announce) setStatus('wait', '已停止收音');
+  if (!isLocal && !demo) startDemo();       // 公開網站沒有別的資料來源，回到示範
+}
+async function startAuto() {                // 先找 MAX9814（之前允許過的裝置），找不到就用電腦麥克風
+  await stopSource();
+  $('bStart').setAttribute('aria-pressed', 'true');
+  $('bStart').textContent = '停止';
+  setStatus('wait', '尋找 MAX9814…');
+  if ('serial' in navigator) {
+    try { for (const port of await navigator.serial.getPorts()) if (await startSerial(port)) return; } catch (e) { /* 沒有權限就算了 */ }
+  }
+  await startMic();
+}
+$('bStart').addEventListener('click', () => micOn ? stopAll() : startAuto());
+if ('serial' in navigator) {
+  $('bUsb').addEventListener('click', async () => {   // 第一次接 MAX9814：要你自己在視窗裡選裝置（瀏覽器的安全規定）
+    let port;
+    try { port = await navigator.serial.requestPort({ filters: USB_FILTERS }); } catch (e) { return; }
+    await stopSource();
+    $('bStart').setAttribute('aria-pressed', 'true');
+    $('bStart').textContent = '停止';
+    setStatus('wait', '連接 MAX9814…');
+    if (!(await startSerial(port))) { setStatus('wait', '打不開這個裝置（被別的程式佔住了？），改用電腦麥克風…'); await startMic(); }
+  });
+} else $('bUsb').hidden = true;
 
 // ---------- 連到 dashboard.py ----------
 function connect() {
@@ -792,7 +928,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme
 buildAxes();
 resize();
 homeCamera();
-window.__viz = { onMessage, startDemo, stopDemo, cfg, pts, camera, controls, renderer, scene, segs, animate, held, pitchOf, micTick, mic };   // 方便在瀏覽器主控台除錯
+window.__viz = { onMessage, startDemo, stopDemo, cfg, pts, camera, controls, renderer, scene, segs, animate, held, pitchOf, micTick, mic, emit, analyseBlock, feedNano, feedPico, startAuto, startSerial, stopAll, serTick, getSer: () => ser };   // 方便在瀏覽器主控台除錯
 requestAnimationFrame(animate);   // 先啟動畫面，連線出任何問題都不會讓畫面空白
 connect();
 </script>
