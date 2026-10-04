@@ -768,7 +768,7 @@ const MODELS = {
   },
   fire: {
     n: '02', zh: '發射', en: 'EMIT', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
-    points: true, wall: false, lines: 'rays', emitter: true, axes: axesFire, place: placeFire,
+    points: true, wall: false, emitter: true, axes: axesFire, place: placeFire,
     home: { pos: [1.1, 1.35, 4.2], target: [0, -0.3, -0.3] },
     // 顏色看離發射口多遠（Life Aquatic 色階：近是朱紅，遠是海藍）
     cloud: { pal: 'zissou', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 0.5, dot: 0.012, sz: [0.8, 0, 0.3], shp: [0, 0, 1], pxMax: 12 },
@@ -779,7 +779,7 @@ const MODELS = {
       ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
       ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
       ['Z', '距離', '響度決定飛多遠：越大聲飛越遠，再被空氣阻力慢慢停下。', 'Chowning 1971 · 響度與距離'],
-      ['連線', '射線', '發射點到每顆泡泡的細線。一串連續的泡泡就是一個聲音物件。', 'Schaeffer 1966 · objet sonore'],
+      ['團', '聲音物件', '一段連續的聲音，是一串一路飛出去的火星；它離開了發射口，被當成一個有方向的物體來聽。', 'Schaeffer 1966 · objet sonore'],
     ],
   },
   rings: {
@@ -956,12 +956,7 @@ function animate(tms) {
     IP[i4] = p.x; IP[i4 + 1] = p.y; IP[i4 + 2] = p.z; IP[i4 + 3] = R;
     IA[i4] = lerp(0.3, 0.88, p.conf) * fade; IA[i4 + 1] = a01; IA[i4 + 2] = lerp(0.4, 1, loud); IA[i4 + 3] = p.seed;
     alive++;
-    if (showLines && md.lines === 'rays') {
-      const a = 0.2 * fade, i = nSeg * 6, j = nSeg * 8;
-      linePos[i] = GUN.x; linePos[i + 1] = GUN.y; linePos[i + 2] = GUN.z; linePos[i + 3] = p.x; linePos[i + 4] = p.y; linePos[i + 5] = p.z;
-      lineCol[j] = lineCol[j + 4] = inkRGB.r; lineCol[j + 1] = lineCol[j + 5] = inkRGB.g; lineCol[j + 2] = lineCol[j + 6] = inkRGB.b; lineCol[j + 3] = lineCol[j + 7] = a;
-      nSeg++;
-    } else if (showLines && md.lines === 'chain' && prev && prev.seg === p.seg) {
+    if (showLines && md.lines === 'chain' && prev && prev.seg === p.seg) {
       const a = 0.45 * Math.min(fade, prev.fade), i = nSeg * 6, j = nSeg * 8;
       linePos[i] = prev.x; linePos[i + 1] = prev.y; linePos[i + 2] = prev.z; linePos[i + 3] = p.x; linePos[i + 4] = p.y; linePos[i + 5] = p.z;
       lineCol[j] = lineCol[j + 4] = inkRGB.r; lineCol[j + 1] = lineCol[j + 5] = inkRGB.g; lineCol[j + 2] = lineCol[j + 6] = inkRGB.b; lineCol[j + 3] = lineCol[j + 7] = a;
