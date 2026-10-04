@@ -414,16 +414,26 @@ const midiOf = f => 69 + 12 * Math.log2(f / 440);
 const octY = f => -0.85 + 1.75 * logN(f, 65, 2100);
 function axesRings() {
   const R = a => RING.r0 + RING.dr * clamp(a / cfg.retention, 0, 1);
-  const circle = (r, y, mat) => { for (const [p, q] of arcPts(0, 360, 5, t => V(r * Math.sin(rad(t)), y, -r * Math.cos(rad(t))))) add(seg(p, q, mat)); };
+  // 底座：中間不拉線。時間的年輪是虛線圈（現在那圈是朱色實線），最外面一圈是儀表盤似的刻度環：十二個音名各一格粗刻度，中間各三格細刻度，C 那格是朱色
+  const pt = (r, ang, y = -1) => V(r * Math.sin(rad(ang)), y, -r * Math.cos(rad(ang)));
+  const lineSet = (pairs, mat) => add(new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints(pairs.flat()), mat));
   const tk = timeTicks(), last = tk[tk.length - 1], at = (a, ang) => V(R(a) * Math.sin(rad(ang)), -1.03, -R(a) * Math.cos(rad(ang)));
-  for (const a of tk) circle(R(a), -1, a === 0 ? nowMat : hairMat);
+  const dashes = [];
+  for (const a of tk) {
+    if (a === 0) for (const [p, q] of arcPts(0, 360, 5, t => pt(R(a), t))) add(seg(p, q, nowMat));
+    else for (let t = 0; t < 360; t += 6) dashes.push([pt(R(a), t), pt(R(a), t + 3)]);
+  }
+  lineSet(dashes, axisMat);
   addLabel('現在', at(0, 195), 'now');
   addLabel('−' + last + ' 秒', at(last, 195));
-  for (let i = 0; i < 12; i++) {
-    const t = rad(i * 30);
-    add(seg(V(RING.r0 * Math.sin(t), -1, -RING.r0 * Math.cos(t)), V(1.3 * Math.sin(t), -1, -1.3 * Math.cos(t)), i === 0 ? axisMat : hairMat));
-    addLabel(NOTES[i], V(1.43 * Math.sin(t), -1, -1.43 * Math.cos(t)));
-  }
+  const RB = 1.3, minor = [], major = [], circ = [];
+  for (let t = 0; t < 360; t += 5) circ.push([pt(RB, t), pt(RB, t + 5)]);
+  lineSet(circ, axisMat);
+  for (let i = 1; i < 48; i++) (i % 4 === 0 ? major : minor).push([pt(RB, i * 7.5), pt(RB - (i % 4 === 0 ? 0.1 : 0.04), i * 7.5)]);
+  lineSet(minor, axisMat);
+  lineSet(major, axisMat);
+  add(seg(pt(RB, 0), pt(RB - 0.1, 0), nowMat));
+  for (let i = 0; i < 12; i++) addLabel(NOTES[i], pt(1.43, i * 30));
   add(seg(V(0, -1, 0), V(0, 1, 0), axisMat));
   for (const [name, f] of [['C2', 65.41], ['C3', 130.81], ['C4', 261.63], ['C5', 523.25], ['C6', 1046.5]]) {
     const y = octY(f);
