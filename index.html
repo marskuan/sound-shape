@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>聲音的形狀</title>
-<meta name="description" content="用麥克風把你的聲音即時變成 3D 的形狀：時間、音高、亮度。聲音只在你的瀏覽器裡分析，不會上傳。">
+<meta name="description" content="用麥克風把你的聲音即時變成 3D 的形狀。五種模型：圖表、發射、年輪、水面、山脈。聲音只在你的瀏覽器裡分析，不會上傳。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23d4402a'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23f3f0e8' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -55,17 +55,23 @@
   .lbl.obj { font-family: var(--serif); font-size: 12px; color: var(--ink); text-align: center; letter-spacing: 0.1em; }
   .lbl.obj small { display: block; font-family: var(--sans); font-size: 10px; color: var(--ink-3); letter-spacing: 0.04em; }
 
+  /* 背後一個很淡、微微暈開的大字：像海報上的大標。只當氣氛，不擋任何東西 */
+  .ghost {
+    position: fixed; z-index: 1; right: 1vw; bottom: -9vh; font: 500 60vh/1 var(--serif); color: var(--ink); opacity: .045;
+    filter: blur(1.6px); pointer-events: none; user-select: none; transition: opacity .5s ease; white-space: nowrap;
+  }
+  .ghost.out { opacity: 0; }
+
   .hud { position: fixed; z-index: 2; }
   .head { top: 28px; left: 30px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-  .head h1 {
-    margin: 0; font: 500 22px/1 var(--serif); letter-spacing: 0.45em; writing-mode: vertical-rl;
-  }
+  .head h1 { margin: 0; font: 500 22px/1 var(--serif); letter-spacing: 0.45em; writing-mode: vertical-rl; }
+  .head::after { content: ""; width: 1px; height: 15vh; margin-left: 10.5px; background: var(--axis); }   /* 一條極細的線，往下垂 */
   .seal {
     width: 22px; height: 22px; background: var(--shu); color: var(--paper); display: grid; place-items: center;
     font: 500 14px/1 var(--serif); border-radius: 2px;
   }
 
-  .foot { left: 30px; bottom: 26px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); max-width: 46vw; }
+  .foot { left: 30px; bottom: 26px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); max-width: 330px; }
   .status { display: flex; align-items: center; gap: 8px; }
   .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); flex: none; }
   .status.wait .dot { background: var(--ink-3); }
@@ -99,14 +105,37 @@
   input[type=range] { width: 100%; accent-color: var(--ink); height: 14px; }
   .note { margin: 12px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--ink-3); }
 
-  .bar-btns { left: 50%; transform: translateX(-50%); bottom: 24px; display: flex; gap: 4px; }
+  /* 下方：獨立的「模型」選單，加一排細字按鈕 */
+  .bar-btns { left: 50%; transform: translateX(-50%); bottom: 24px; display: flex; align-items: center; gap: 4px; width: max-content; max-width: calc(100vw - 20px); }
   .bar-btns button {
     font: inherit; font-size: 12px; letter-spacing: 0.2em; background: none; color: var(--ink-3); border: 0;
     border-bottom: 1px solid transparent; padding: 4px 12px; cursor: pointer;
   }
+  .bar-btns button { white-space: nowrap; }
   .bar-btns button:hover { color: var(--ink); }
   .bar-btns button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--shu); }
+  .bar-btns button:disabled { opacity: .3; cursor: default; }
   button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+  .rule { width: 1px; height: 18px; background: var(--axis); margin: 0 10px; flex: none; }
+  .picker { position: relative; display: flex; align-items: center; }
+  .bar-btns .picker > button { display: inline-flex; align-items: baseline; gap: 12px; padding: 4px 4px 5px 0; color: var(--ink); border-bottom: 1px solid var(--ink); letter-spacing: 0; }
+  .picker .cap { font-size: 10px; letter-spacing: .25em; color: var(--ink-3); }
+  .picker .nm { font: 500 14px/1 var(--serif); letter-spacing: .3em; }
+  .picker svg { width: 9px; height: 9px; stroke: currentColor; fill: none; stroke-width: 1.5; align-self: center; transition: transform .2s ease; }
+  .picker button[aria-expanded="true"] svg { transform: rotate(180deg); }
+  .menu {
+    position: absolute; bottom: calc(100% + 16px); left: 0; width: min(380px, 90vw); margin: 0; padding: 8px 0; list-style: none;
+    background: var(--paper); border: 1px solid var(--axis); max-height: 64vh; overflow: auto;
+  }
+  .menu[hidden] { display: none; }
+  .menu li { position: relative; display: grid; grid-template-columns: 30px 1fr; padding: 11px 20px 11px 22px; cursor: pointer; }
+  .menu li + li { border-top: 1px solid var(--hair); }
+  .menu li:hover, .menu li.active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+  .menu li[aria-selected="true"]::before { content: ""; position: absolute; left: 8px; top: 18px; width: 6px; height: 6px; background: var(--shu); }
+  .menu .num { font-size: 10px; letter-spacing: .12em; color: var(--ink-3); padding-top: 5px; font-variant-numeric: tabular-nums; }
+  .menu .nm { font: 500 15px/1.4 var(--serif); letter-spacing: .3em; color: var(--ink); }
+  .menu .nm small { font: 9.5px var(--sans); letter-spacing: .22em; color: var(--ink-3); margin-left: 12px; }
+  .menu .ds { grid-column: 2; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
 
   #tip {
     position: fixed; z-index: 4; pointer-events: none; display: none; white-space: nowrap;
@@ -118,12 +147,18 @@
   #fatal { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center; padding: 24px; background: var(--paper); }
   #fatal[hidden] { display: none; }
 
+  @media (max-width: 1100px) { .foot { bottom: 62px; } }
   @media (max-width: 760px) {
     .head { top: 14px; left: 16px; flex-direction: row; align-items: center; }
     .head h1 { writing-mode: horizontal-tb; font-size: 18px; letter-spacing: 0.3em; }
+    .head::after { display: none; }
+    .ghost { font-size: 64vw; right: -6vw; bottom: 14vh; }
     .theory { top: 52px; right: 16px; left: 16px; width: auto; max-height: 52vh; background: var(--paper); padding: 0 0 4px; }
-    .foot { left: 16px; bottom: 92px; max-width: calc(100vw - 32px); }
-    .bar-btns { bottom: 12px; width: calc(100% - 20px); justify-content: center; flex-wrap: wrap; }
+    .foot { left: 16px; bottom: 100px; max-width: calc(100vw - 32px); }
+    .bar-btns { bottom: 12px; width: calc(100% - 20px); justify-content: center; flex-wrap: wrap; row-gap: 6px; }
+    .picker { flex-basis: 100%; justify-content: center; }
+    .rule { display: none; }
+    .menu { left: 50%; transform: translateX(-50%); }
   }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
@@ -136,6 +171,7 @@
 </head>
 <body>
 <div id="stage"></div>
+<div class="ghost" id="ghost" aria-hidden="true">圖</div>
 <div id="labels"></div>
 <div id="tip"></div>
 
@@ -147,16 +183,12 @@
 <aside class="hud theory" aria-label="理論對照">
   <details open id="theory">
     <summary>理論對照</summary>
-    <div class="row" id="xRow"><div class="k"><i>X</i>時間</div>
-      <p>聲音是會展開的形態：起音、持續、結束。</p><cite>Smalley 1997 · spectromorphology</cite></div>
-    <div class="row" id="yRow"><div class="k"><i>Y</i>音高</div>
-      <p>頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。</p><cite>Smalley 1997 · Wessel 1979</cite></div>
-    <div class="row" id="zRow"><div class="k"><i>Z</i>亮度</div>
-      <p>頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。</p><cite>Grey 1977 · timbre space</cite></div>
+    <div class="row" id="r0"></div>
+    <div class="row" id="r1"></div>
+    <div class="row" id="r2"></div>
+    <div class="row" id="r3"></div>
     <div class="row"><div class="k"><i>墨色</i>音調 ↔ 噪音</div>
-      <p>墨濃是有明確音高（note），墨淡是噪音（noise），之間是含糊的音高（node）。噪音沉在底部的無音高帶。</p><cite>Smalley 1997 · spectral typology</cite></div>
-    <div class="row" id="lRow"><div class="k"><i>連線</i>聲音物件</div>
-      <p>一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。</p><cite>Schaeffer 1966 · objet sonore</cite></div>
+      <p>墨濃是有明確音高（note），墨淡是噪音（noise），之間是含糊的音高（node）。</p><cite>Smalley 1997 · spectral typology</cite></div>
     <div class="row"><div class="k"><i>短暫</i>只留幾秒</div>
       <p>點會自己消失，編碼聲音的東西和聲音一樣短暫。</p><cite>SensaBubble, CHI 2014 · ephemeral</cite></div>
 
@@ -166,6 +198,7 @@
     </div>
     <label class="set">保留<input type="range" id="rRet" min="1" max="60" step="1" value="3"><output id="oRet">3 秒</output></label>
     <label class="set">最小響度<input type="range" id="rMin" min="2" max="25" step="1" value="6"><output id="oMin">6 dB</output></label>
+    <p class="note">操作：左鍵（手機：單指）旋轉，滾輪（雙指捏）縮放，右鍵（雙指拖）移動，連點兩下或按 . 回到中心，數字鍵 1–5 切換模型。</p>
     <p class="note">這是依文獻做的設計對照，軸的選擇是詮釋，不等於這些文獻自己用的軸。</p>
     <p class="note">打開網頁時，瀏覽器會問你要不要允許使用麥克風。聲音只在你的瀏覽器裡分析，不會錄音，也不會傳到任何地方。</p>
   </details>
@@ -173,15 +206,22 @@
 
 <footer class="hud foot">
   <div class="status wait" id="status" role="status" aria-live="polite"><i class="dot"></i><span id="statusText">準備中…</span></div>
-  <div class="hint">左鍵（手機：單指）旋轉 · 滾輪（雙指）縮放 · 右鍵（雙指拖）移動 · 連點兩下或按 . 回到中心</div>
+  <div class="hint">拖曳旋轉 · 滾輪（雙指）縮放 · 連點兩下回中心</div>
   <div class="now-row"><span>音高 <b id="nPitch">–</b></span><span>亮度 <b id="nCen">–</b></span><span>響度 <b id="nRel">–</b></span><span>點 <b id="nCount">0</b></span></div>
 </footer>
 
 <div class="hud bar-btns">
-  <button id="bView" title="換成另一種看法：圖表，或聲音從一個點發射出去">畫面：圖表</button>
+  <div class="picker">
+    <button id="bModel" aria-haspopup="listbox" aria-expanded="false" aria-controls="modelMenu" title="換一種把聲音變成 3D 的模型（也可以按數字鍵 1–5）">
+      <span class="cap">模型</span><span class="nm" id="modelName">圖表</span>
+      <svg viewBox="0 0 10 10" aria-hidden="true"><path d="M1 3.5l4 4 4-4"/></svg>
+    </button>
+    <ul class="menu" id="modelMenu" role="listbox" aria-label="選擇模型" hidden></ul>
+  </div>
+  <span class="rule" aria-hidden="true"></span>
   <button id="bHome" title="把視角、縮放都回到預設的中心（也可以連點兩下，或按 . 鍵）">回中心</button>
   <button id="bPause" aria-pressed="false" title="讓畫面停住，慢慢看">暫停</button>
-  <button id="bClear" title="把畫面上的點全部清掉">清除</button>
+  <button id="bClear" title="把畫面上的聲音全部清掉">清除</button>
   <button id="bRot" aria-pressed="false" title="讓畫面自己慢慢轉">旋轉</button>
   <button id="bLine" aria-pressed="true" title="顯示或隱藏點之間的連線">連線</button>
   <button id="bLbl" aria-pressed="true" title="顯示或隱藏聲音的名稱標籤">標籤</button>
@@ -205,8 +245,7 @@ try {
   throw err;
 }
 
-// ---------- 三個軸與它們的刻度 ----------
-// X 時間（新的在右）、Y 音高、Z 亮度（頻譜重心）。大小 = 響度，墨色 = 音調↔噪音。
+// ---------- 共用的量與刻度 ----------
 const cfg = { retention: 3, minRel: 6, labelRel: 12 };
 const PITCH = { lo: 80, hi: 5000, minConf: 0.45, noteConf: 0.75, top: 1, bottom: -0.74, stripY: -0.95 };
 const BRIGHT = { lo: 200, hi: 6000 };
@@ -216,15 +255,6 @@ const pitchY = f => PITCH.bottom + (PITCH.top - PITCH.bottom) * logN(f, PITCH.lo
 const brightZ = c => logN(c, BRIGHT.lo, BRIGHT.hi) * 2 - 1;
 const PITCH_TICKS = [[110, 'A2'], [220, 'A3'], [440, 'A4'], [880, 'A5'], [1760, 'A6'], [3520, 'A7']];
 const BRIGHT_TICKS = [250, 500, 1000, 2000, 4000];
-let view = 'plot';                               // 'plot' 圖表（時間、音高…）／'fire' 發射（聲音從一個點射出去）
-
-// ---- 「發射」畫面：聲音從一個固定的點射出去 ----
-// 水平角 = 音色（悶的往左、亮的往右）、仰角 = 音高、飛多遠 = 響度。
-const GUN = { x: 0, y: -0.45, z: 1.25 };
-const EL = { lo: -15, hi: 35 };
-const FLY = { vMin: 0.5, vMax: 2.3, drag: 1.2 };
-const AZ_SPREAD = 45;
-const FIRE_DIR_TICKS = [[-45, '左 45°'], [-30, '30°'], [-15, '15°'], [0, '正前方'], [15, '15°'], [30, '30°'], [45, '右 45°']];
 const rad = d => d * Math.PI / 180;
 const fAim = (a, pos, neg) => Math.abs(a) < 3 ? '正前方' : (a < 0 ? neg : pos) + ' ' + Math.round(Math.abs(a)) + '°';
 const fHz = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + ' kHz' : Math.round(v) + ' Hz';
@@ -232,9 +262,17 @@ const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A�
 const noteName = f => { const m = Math.round(69 + 12 * Math.log2(f / 440)); return NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); };
 const kindOf = c => c >= PITCH.noteConf ? ['note', '音調'] : c >= PITCH.minConf ? ['node', '含糊音高'] : ['noise', '噪音'];
 
-// ---------- 場景 ----------
+// 「發射」模型：聲音從一個固定的點射出去。水平角 = 音色、仰角 = 音高、飛多遠 = 響度。
+const GUN = { x: 0, y: -0.45, z: 1.25 };
+const EL = { lo: -15, hi: 35 };
+const FLY = { vMin: 0.5, vMax: 2.3, drag: 1.2 };
+const AZ_SPREAD = 45;
+const FIRE_DIR_TICKS = [[-45, '左 45°'], [-30, '30°'], [-15, '15°'], [0, '正前方'], [15, '15°'], [30, '30°'], [45, '右 45°']];
+
+// ---------- 場景（背景透明：紙和背後的大字由網頁本身畫） ----------
 const stage = $('stage');
-const renderer = new THREE.WebGLRenderer({ antialias: true });
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+renderer.setClearColor(0x000000, 0);
 renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 2));
 stage.appendChild(renderer.domElement);
 const scene = new THREE.Scene();
@@ -262,9 +300,10 @@ const ringMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false,
 const hoverMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
 const inkU = { value: new THREE.Color() };
 const shuMat = new THREE.MeshBasicMaterial(), inkMeshMat = new THREE.MeshBasicMaterial();
+const ridgeLineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
+const ridgeFillMat = new THREE.MeshBasicMaterial({ polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, side: THREE.DoubleSide });
 function applyTheme() {
   readTokens();
-  scene.background = new THREE.Color(T.paper);
   scene.fog = new THREE.Fog(new THREE.Color(T.paper), 7, 16);
   hairMat.color.set(T.hair);
   axisMat.color.set(T.axis);
@@ -275,9 +314,10 @@ function applyTheme() {
   inkU.value.set(T.ink);
   shuMat.color.set(T.shu);
   inkMeshMat.color.set(T.ink);
+  ridgeFillMat.color.set(T.paper);
 }
 
-// ---- 座標軸：三條細線、地板與背牆的格線、無音高帶 ----
+// ---- 座標軸與標籤 ----
 const axisGroup = new THREE.Group();
 scene.add(axisGroup);
 const labelEls = [];
@@ -296,6 +336,7 @@ function removeLabels(owner) {
 }
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const seg = (a, b, mat) => new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), mat);
+const add = (...o) => axisGroup.add(...o);
 function timeTicks() {
   const r = cfg.retention;
   const step = r <= 6 ? 1 : r <= 12 ? 2 : r <= 30 ? 5 : 10;
@@ -304,63 +345,220 @@ function timeTicks() {
   return t;
 }
 const timeX = age => (1 - clamp(age / cfg.retention, 0, 1)) * 2 - 1;
-// 「發射」畫面的座標：地板上以發射點為中心的扇形（水平角的放射線 + 距離弧），旁邊垂直的弧是仰角（音高）
-function buildFireAxes() {
-  const gx = GUN.x, gy = -1, gz = GUN.z;
-  const arc = (r, a0, a1, step, f, mat) => {
-    let prev = f(a0, r);
-    for (let a = a0 + step; a <= a1 + 1e-6; a += step) { const q = f(a, r); axisGroup.add(seg(prev, q, mat)); prev = q; }
-  };
-  const floorAt = (a, r) => V(gx + r * Math.sin(rad(a)), gy, gz - r * Math.cos(rad(a)));
-  for (const [a, name] of FIRE_DIR_TICKS) {
-    axisGroup.add(seg(floorAt(a, 0.1), floorAt(a, 2.15), a === 0 ? axisMat : hairMat));
-    addLabel(name, floorAt(a, 2.3));
-  }
-  for (const r of [0.5, 1.0, 1.5, 2.0]) arc(r, -46, 46, 4, floorAt, hairMat);
-  addLabel('小聲', floorAt(0, 0.5).add(V(0.13, 0, 0)), 'tick');
-  addLabel('大聲', floorAt(0, 2.0).add(V(0.13, 0, 0)), 'tick');
-  const tiltAt = (e, r) => V(gx, GUN.y + r * Math.sin(rad(e)), gz - r * Math.cos(rad(e)));
-  arc(1.0, EL.lo, EL.hi, 3, tiltAt, axisMat);
-  for (const [f, name] of PITCH_TICKS) {
-    const e = lerp(EL.lo, EL.hi, logN(f, PITCH.lo, PITCH.hi));
-    axisGroup.add(seg(tiltAt(e, 0.96), tiltAt(e, 1.06), axisMat));
-    addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, tiltAt(e, 1.13), 'tick');
-  }
-  addLabel('仰角 TILT<small>音高</small>', tiltAt(EL.hi + 8, 1.0), 'title');
-  addLabel('水平角 PAN<small>音色</small>', V(gx, gy - 0.02, gz + 0.5), 'title');
-  addLabel('距離<small>響度</small>', floorAt(34, 2.0).add(V(0.15, 0, 0)), 'title');
-}
-function buildAxes() {
-  axisGroup.traverse(o => o.geometry && o.geometry.dispose());
-  axisGroup.clear();
-  removeLabels('axes');
-  if (view === 'fire') { buildFireAxes(); return; }
+const arcPts = (a0, a1, step, f) => { let prev = f(a0); const out = []; for (let a = a0 + step; a <= a1 + 1e-6; a += step) { const q = f(a); out.push([prev, q]); prev = q; } return out; };
+
+// ===== 模型 01：圖表 =====
+function axesPlot() {
   for (const a of timeTicks()) {
     const x = timeX(a);
-    axisGroup.add(seg(V(x, -1, -1), V(x, 1, -1), hairMat), seg(V(x, -1, -1), V(x, -1, 1), hairMat));
+    add(seg(V(x, -1, -1), V(x, 1, -1), hairMat), seg(V(x, -1, -1), V(x, -1, 1), hairMat));
     addLabel(a === 0 ? '現在' : '−' + a + ' s', V(x, -1.05, 1.08));
   }
   for (const [f, name] of PITCH_TICKS) {
     const y = pitchY(f);
-    axisGroup.add(seg(V(-1, y, -1), V(1, y, -1), hairMat));
+    add(seg(V(-1, y, -1), V(1, y, -1), hairMat));
     addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, V(-1.05, y, 1.06), 'tick');
   }
   for (const c of BRIGHT_TICKS) {
     const z = brightZ(c);
-    axisGroup.add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
+    add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
     addLabel(fHz(c).replace(' ', ''), V(1.07, -1.05, z));
   }
-  axisGroup.add(seg(V(-1, -1, 1), V(1, -1, 1), axisMat), seg(V(-1, -1, 1), V(-1, 1, 1), axisMat), seg(V(1, -1, 1), V(1, -1, -1), axisMat));
-  axisGroup.add(seg(V(-1, STRIP_TOP, -1), V(1, STRIP_TOP, -1), stripMat));
-  axisGroup.add(seg(V(1, -1, -1), V(1, 1, -1), nowMat));
+  add(seg(V(-1, -1, 1), V(1, -1, 1), axisMat), seg(V(-1, -1, 1), V(-1, 1, 1), axisMat), seg(V(1, -1, 1), V(1, -1, -1), axisMat));
+  add(seg(V(-1, STRIP_TOP, -1), V(1, STRIP_TOP, -1), stripMat));
+  add(seg(V(1, -1, -1), V(1, 1, -1), nowMat));
   addLabel('現在', V(1, 1.08, -1), 'now');
   addLabel('無音高<small>noise</small>', V(-1.05, (STRIP_TOP - 1) / 2 + 0.04, -1), 'tick');
   addLabel('時間<small>TIME</small>', V(0, -1.2, 1.12), 'title');
   addLabel('音高<small>PITCH</small>', V(-1.2, 1.14, 1.0), 'title');
   addLabel('亮度<small>BRIGHTNESS</small>', V(1.9, -1.08, -0.1), 'title');
 }
+function placePlot(p, age) {
+  p.x = timeX(age); p.z = brightZ(p.cen);
+  p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;
+}
 
-// ---- 點：一顆一顆的墨點，投影在地板和背牆上的淡影 ----
+// ===== 模型 02：發射 =====
+function axesFire() {
+  const gx = GUN.x, gy = -1, gz = GUN.z;
+  const floorAt = a => r => V(gx + r * Math.sin(rad(a)), gy, gz - r * Math.cos(rad(a)));
+  const fAt = (a, r) => floorAt(a)(r);
+  for (const [a, name] of FIRE_DIR_TICKS) {
+    add(seg(fAt(a, 0.1), fAt(a, 2.15), a === 0 ? axisMat : hairMat));
+    addLabel(name, fAt(a, 2.3));
+  }
+  for (const r of [0.5, 1.0, 1.5, 2.0]) for (const [p, q] of arcPts(-46, 46, 4, a => fAt(a, r))) add(seg(p, q, hairMat));
+  addLabel('小聲', fAt(0, 0.5).add(V(0.13, 0, 0)), 'tick');
+  addLabel('大聲', fAt(0, 2.0).add(V(0.13, 0, 0)), 'tick');
+  const tiltAt = (e, r) => V(gx, GUN.y + r * Math.sin(rad(e)), gz - r * Math.cos(rad(e)));
+  for (const [p, q] of arcPts(EL.lo, EL.hi, 3, e => tiltAt(e, 1.0))) add(seg(p, q, axisMat));
+  for (const [f, name] of PITCH_TICKS) {
+    const e = lerp(EL.lo, EL.hi, logN(f, PITCH.lo, PITCH.hi));
+    add(seg(tiltAt(e, 0.96), tiltAt(e, 1.06), axisMat));
+    addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, tiltAt(e, 1.13), 'tick');
+  }
+  addLabel('仰角 TILT<small>音高</small>', tiltAt(EL.hi + 8, 1.0), 'title');
+  addLabel('水平角 PAN<small>音色</small>', V(gx, gy - 0.02, gz + 0.5), 'title');
+  addLabel('距離<small>響度</small>', fAt(34, 2.0).add(V(0.15, 0, 0)), 'title');
+}
+const _d = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+function aimDir(az, el, out) {
+  const ce = Math.cos(rad(el));
+  return out.set(Math.sin(rad(az)) * ce, Math.sin(rad(el)), -Math.cos(rad(az)) * ce);
+}
+function placeFire(p, age) {                       // 音色 = 水平角、音高 = 仰角、響度 = 出口速度；空氣阻力讓它慢慢停下
+  p.az = lerp(-AZ_SPREAD, AZ_SPREAD, logN(p.cen, 300, 4000));
+  p.el = lerp(EL.lo, EL.hi, p.pitched ? logN(p.pitch, PITCH.lo, PITCH.hi) : 0.06 * p.conf);
+  const r = (lerp(FLY.vMin, FLY.vMax, clamp(p.rel / 36, 0, 1)) / FLY.drag) * (1 - Math.exp(-FLY.drag * age));
+  aimDir(p.az, p.el, _d);
+  p.x = GUN.x + _d.x * r; p.y = GUN.y + _d.y * r; p.z = GUN.z + _d.z * r;
+}
+
+// ===== 模型 03：年輪（音高螺旋）=====
+// 音名（C 到 B）繞成一圈，每高一個八度就往上一層，時間往外擴。
+const RING = { r0: 0.3, dr: 0.95 };
+const midiOf = f => 69 + 12 * Math.log2(f / 440);
+const octY = f => -0.85 + 1.75 * logN(f, 65, 2100);
+function axesRings() {
+  const R = a => RING.r0 + RING.dr * clamp(a / cfg.retention, 0, 1);
+  const circle = (r, y, mat) => { for (const [p, q] of arcPts(0, 360, 5, t => V(r * Math.sin(rad(t)), y, -r * Math.cos(rad(t))))) add(seg(p, q, mat)); };
+  const tk = timeTicks(), last = tk[tk.length - 1], at = (a, ang) => V(R(a) * Math.sin(rad(ang)), -1.03, -R(a) * Math.cos(rad(ang)));
+  for (const a of tk) circle(R(a), -1, a === 0 ? nowMat : hairMat);
+  addLabel('現在', at(0, 195), 'now');
+  addLabel('−' + last + ' 秒', at(last, 195));
+  for (let i = 0; i < 12; i++) {
+    const t = rad(i * 30);
+    add(seg(V(RING.r0 * Math.sin(t), -1, -RING.r0 * Math.cos(t)), V(1.3 * Math.sin(t), -1, -1.3 * Math.cos(t)), i === 0 ? axisMat : hairMat));
+    addLabel(NOTES[i], V(1.43 * Math.sin(t), -1, -1.43 * Math.cos(t)));
+  }
+  add(seg(V(0, -1, 0), V(0, 1, 0), axisMat));
+  for (const [name, f] of [['C2', 65.41], ['C3', 130.81], ['C4', 261.63], ['C5', 523.25], ['C6', 1046.5]]) {
+    const y = octY(f);
+    add(seg(V(-0.05, y, 0), V(0.05, y, 0), axisMat));
+    addLabel(name, V(0.12, y, 0), 'tick');
+  }
+  addLabel('音名<small>PITCH CLASS</small>', V(0, -1.02, -1.75), 'title');
+  addLabel('八度<small>OCTAVE</small>', V(0, 1.14, 0), 'title');
+}
+function placeRings(p, age) {
+  const r = RING.r0 + RING.dr * clamp(age / cfg.retention, 0, 1);
+  let th, y;
+  if (p.pitched) { th = rad((((midiOf(p.pitch) % 12) + 12) % 12) * 30); y = octY(p.pitch); }
+  else { th = logN(p.cen, 200, 6000) * 2 * Math.PI; y = -0.95 + 0.1 * p.conf; }       // 沒有音高的：貼地，角度由音色決定
+  p.x = r * Math.sin(th); p.z = -r * Math.cos(th); p.y = y;
+}
+
+// ===== 模型 04、05 共用：一排一排的細線（山脈、水面），後面的線被前面的山遮住 =====
+class Ridge {
+  constructor(rows, cols) {
+    this.rows = rows; this.cols = cols; this.items = [];
+    this.group = new THREE.Group(); this.group.visible = false; scene.add(this.group);
+    const idx = [];
+    for (let j = 0; j < cols - 1; j++) { const a = 2 * j; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
+    for (let i = 0; i < rows; i++) {
+      const lp = new Float32Array(cols * 3), lc = new Float32Array(cols * 4), fp = new Float32Array(cols * 6);
+      const lg = new THREE.BufferGeometry();
+      lg.setAttribute('position', new THREE.BufferAttribute(lp, 3).setUsage(THREE.DynamicDrawUsage));
+      lg.setAttribute('color', new THREE.BufferAttribute(lc, 4).setUsage(THREE.DynamicDrawUsage));
+      const fg = new THREE.BufferGeometry();
+      fg.setAttribute('position', new THREE.BufferAttribute(fp, 3).setUsage(THREE.DynamicDrawUsage));
+      fg.setIndex(idx);
+      const line = new THREE.Line(lg, ridgeLineMat), fill = new THREE.Mesh(fg, ridgeFillMat);
+      line.frustumCulled = fill.frustumCulled = false;
+      line.visible = fill.visible = false;
+      this.group.add(fill, line);
+      this.items.push({ lp, lc, fp, line, fill });
+    }
+  }
+  setRow(i, z, ys, alpha, floorY) {
+    const it = this.items[i], n = this.cols, c = inkRGB;
+    for (let j = 0; j < n; j++) {
+      const x = -1 + 2 * j / (n - 1);
+      it.lp[j * 3] = x; it.lp[j * 3 + 1] = ys[j]; it.lp[j * 3 + 2] = z;
+      it.lc[j * 4] = c.r; it.lc[j * 4 + 1] = c.g; it.lc[j * 4 + 2] = c.b; it.lc[j * 4 + 3] = alpha;
+      it.fp[j * 6] = x; it.fp[j * 6 + 1] = ys[j]; it.fp[j * 6 + 2] = z;
+      it.fp[j * 6 + 3] = x; it.fp[j * 6 + 4] = floorY; it.fp[j * 6 + 5] = z;
+    }
+    it.line.geometry.attributes.position.needsUpdate = it.line.geometry.attributes.color.needsUpdate = true;
+    it.fill.geometry.attributes.position.needsUpdate = true;
+    it.line.visible = it.fill.visible = true;
+  }
+  hideFrom(i) { for (let k = i; k < this.rows; k++) this.items[k].line.visible = this.items[k].fill.visible = false; }
+}
+const BANDS = 96, B_LO = 80, B_HI = 8000;
+const ridgeSpec = new Ridge(110, BANDS);     // 山脈：每一條是某一刻的頻譜
+const WATER_ROWS = 38, WATER_COLS = 84, WATER_Y = -0.74;
+const ridgeWater = new Ridge(WATER_ROWS, WATER_COLS);   // 水面：固定的一排排線，被漣漪推高
+const specRows = [], ripples = [];
+let lastRow = -9, lastRipple = -9;
+const _ys = new Float32Array(Math.max(BANDS, WATER_COLS));
+
+const floorFrame = (y, z0 = -1, z1 = 1) => { add(seg(V(-1, y, z0), V(1, y, z0), axisMat), seg(V(1, y, z0), V(1, y, z1), axisMat), seg(V(1, y, z1), V(-1, y, z1), axisMat), seg(V(-1, y, z1), V(-1, y, z0), axisMat)); };
+function axesRidge() {
+  floorFrame(-1);
+  for (const [f, t] of [[100, '100'], [200, '200'], [500, '500'], [1000, '1k'], [2000, '2k'], [5000, '5k']]) {
+    const x = -1 + 2 * logN(f, B_LO, B_HI);
+    add(seg(V(x, -1, 1), V(x, -1, 1.06), axisMat));
+    addLabel(t, V(x, -1.04, 1.12));
+  }
+  addLabel('頻率<small>FREQUENCY (Hz)</small>', V(0, -1.16, 1.3), 'title');
+  add(seg(V(1.12, -1, 0.95), V(1.12, -1, -0.95), nowMat));         // 貼在右邊外側的時間軸：前面是現在，後面是舊的
+  addLabel('現在', V(1.2, -1.03, 0.95), 'now');
+  addLabel('舊', V(1.2, -1.03, -0.95));
+  addLabel('時間', V(1.2, -1.03, 0), 'title');
+}
+function axesWater() {
+  floorFrame(-1);
+  addLabel('低音', V(-1, -1.04, 1.14));
+  addLabel('高音', V(1, -1.04, 1.14));
+  addLabel('音高', V(0, -1.16, 1.32), 'title');
+  addLabel('悶', V(1.12, -1.03, -1));
+  addLabel('亮', V(1.12, -1.03, 1));
+  addLabel('音色', V(1.2, -1.06, 0), 'title');
+}
+function updateRidge(now) {
+  const ret = cfg.retention;
+  while (specRows.length && now - specRows[0].t > ret + 0.2) specRows.shift();
+  const n = Math.min(specRows.length, ridgeSpec.rows);
+  for (let i = 0; i < n; i++) {
+    const row = specRows[specRows.length - 1 - i], u = clamp((now - row.t) / ret, 0, 1);
+    for (let j = 0; j < BANDS; j++) _ys[j] = -1 + 1.15 * row.v[j];
+    ridgeSpec.setRow(i, lerp(0.95, -0.95, u), _ys, 0.95 - 0.75 * u, -1);
+  }
+  ridgeSpec.hideFrom(n);
+}
+const W = { speed: 0.85, lam: 0.3, width: 0.17 };
+const WX = Float32Array.from({ length: WATER_COLS }, (_, j) => -1 + 2 * j / (WATER_COLS - 1));
+const WZ = Float32Array.from({ length: WATER_ROWS }, (_, i) => lerp(-0.95, 0.95, i / (WATER_ROWS - 1)));
+let waterTick = 0;
+function updateWater(now) {
+  if (waterTick++ & 1) return;                       // 水波動得慢，每兩幀算一次就夠，手機才跑得動
+  const ret = cfg.retention;
+  while (ripples.length && now - ripples[0].t > ret * 1.3) ripples.shift();
+  const rs = [];
+  for (const r of ripples) {
+    const age = now - r.t, amp = r.a * Math.exp(-age / (ret * 0.5)), splash = Math.exp(-age / 0.2);
+    if (amp < 0.004 && splash < 0.02) continue;      // 已經看不見的漣漪不用算
+    rs.push({ x: r.x, z: r.z, a: r.a, amp, R: W.speed * age, splash });
+  }
+  const K = 2 * Math.PI / W.lam, inv = 1 / (2 * W.width * W.width);
+  for (let i = 0; i < WATER_ROWS; i++) {
+    const z = WZ[i];
+    for (let j = 0; j < WATER_COLS; j++) {
+      const x = WX[j];
+      let h = 0;
+      for (let k = 0; k < rs.length; k++) {
+        const r = rs[k], dx = x - r.x, dz = z - r.z, d2 = dx * dx + dz * dz, d = Math.sqrt(d2), u = d - r.R;
+        if (u > -0.45 && u < 0.45) h += r.amp * Math.exp(-u * u * inv) * Math.cos(K * u);        // 離波前太遠的點，貢獻小到看不見
+        if (r.splash > 0.02 && d2 < 0.09) h += r.a * 1.1 * r.splash * Math.exp(-d2 / 0.012);     // 剛落下時中心的水花
+      }
+      _ys[j] = WATER_Y + clamp(h, -0.4, 0.45);
+    }
+    ridgeWater.setRow(i, z, _ys, 0.9, -1);
+  }
+}
+
+// ---- 點：一顆一顆的墨點（周圍有一圈暈開的墨），投影在地板和背牆上的淡影 ----
 const CAP = 3000;
 const pts = new Array(CAP).fill(null);
 let head = 0, segId = 0, lastT = -9, lastAdd = -9;
@@ -369,24 +567,26 @@ const aAlpha = new THREE.BufferAttribute(new Float32Array(CAP), 1).setUsage(THRE
 const posMain = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
 const posFloor = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
 const posWall = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
+const HALO = 1.7;                              // 精靈比墨點本體大 1.7 倍，多出來的是暈開的墨
 const pointVert = `
   attribute float aSize; attribute float aAlpha;
   uniform float uScale; uniform float uSizeMul; varying float vAlpha;
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = max(aSize * uSizeMul * uScale / -mv.z, 1.5);
+    gl_PointSize = max(aSize * uSizeMul * uScale / -mv.z, 1.5) * ${HALO.toFixed(2)};
     vAlpha = aAlpha;
   }`;
 const pointFrag = `
   uniform vec3 uInk; uniform float uAlphaMul; varying float vAlpha;
   void main() {
     vec2 p = gl_PointCoord * 2.0 - 1.0;
-    float r = length(p);
-    if (r > 1.0) discard;
-    float edge = 1.0 - smoothstep(0.86, 1.0, r);
-    float wet = 0.8 + 0.2 * smoothstep(0.5, 0.92, r);      // 墨乾了邊緣比較深
-    gl_FragColor = vec4(uInk, vAlpha * uAlphaMul * edge * wet);
+    float r = length(p) * ${HALO.toFixed(2)};
+    if (r > ${HALO.toFixed(2)}) discard;
+    float core = 1.0 - smoothstep(0.86, 1.0, r);
+    float wet = 0.8 + 0.2 * smoothstep(0.5, 0.92, r);                       // 墨乾了邊緣比較深
+    float halo = (1.0 - smoothstep(1.0, ${HALO.toFixed(2)}, r)) * 0.2;      // 暈開的墨
+    gl_FragColor = vec4(uInk, vAlpha * uAlphaMul * max(core * wet, halo));
   }`;
 const scaleU = { value: 800 };
 function makePoints(posAttr, sizeMul, alphaMul) {
@@ -401,9 +601,9 @@ function makePoints(posAttr, sizeMul, alphaMul) {
   scene.add(p);
   return p;
 }
-makePoints(posFloor, 0.55, 0.28);
+const floorPts = makePoints(posFloor, 0.55, 0.28);
 const wallPts = makePoints(posWall, 0.55, 0.28);
-makePoints(posMain, 1, 1);
+const mainPts = makePoints(posMain, 1, 1);
 
 // 發射點：一根朱色的短管跟著最新的聲音轉，底座是墨色的球；地板弧和仰角弧上各有一個瞄準點
 const emitter = new THREE.Group();
@@ -416,11 +616,6 @@ emitter.add(barrel, base, panDot, tiltDot);
 emitter.visible = false;
 scene.add(emitter);
 const aim = { az: 0, el: lerp(EL.lo, EL.hi, 0.3) };
-const _d = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
-function aimDir(az, el, out) {
-  const ce = Math.cos(rad(el));
-  return out.set(Math.sin(rad(az)) * ce, Math.sin(rad(el)), -Math.cos(rad(az)) * ce);
-}
 
 const linePos = new Float32Array(CAP * 2 * 3), lineCol = new Float32Array(CAP * 2 * 4);
 const lineGeo = new THREE.BufferGeometry();
@@ -443,6 +638,75 @@ ring.visible = hoverRing.visible = false;
 ring.renderOrder = hoverRing.renderOrder = 10;
 scene.add(ring, hoverRing);
 
+// ---------- 模型的清單：每一個是把聲音變成 3D 的一種做法 ----------
+const ORDER = ['plot', 'fire', 'rings', 'water', 'ridge'];
+const MODELS = {
+  plot: {
+    n: '01', zh: '圖表', en: 'PLOT', glyph: '圖', desc: '橫是時間，上是音高，前是音色。最直接的一張圖。',
+    points: true, wall: true, lines: 'chain', axes: axesPlot, place: placePlot,
+    home: { pos: [2.3, 1.0, 5.2], target: [0, -0.2, 0] },
+    rows: [
+      ['X', '時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'],
+      ['Y', '音高', '頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。', 'Smalley 1997 · Wessel 1979'],
+      ['Z', '亮度', '頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。', 'Grey 1977 · timbre space'],
+      ['連線', '聲音物件', '一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。', 'Schaeffer 1966 · objet sonore'],
+    ],
+  },
+  fire: {
+    n: '02', zh: '發射', en: 'EMIT', glyph: '射', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
+    points: true, wall: false, lines: 'rays', emitter: true, axes: axesFire, place: placeFire,
+    home: { pos: [1.1, 1.35, 4.2], target: [0, -0.3, -0.3] },
+    rows: [
+      ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
+      ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
+      ['Z', '距離', '響度決定飛多遠：越大聲飛越遠，再被空氣阻力慢慢停下。', 'Chowning 1971 · 響度與距離'],
+      ['連線', '射線', '發射點到每顆泡泡的細線。一串連續的泡泡就是一個聲音物件。', 'Schaeffer 1966 · objet sonore'],
+    ],
+  },
+  rings: {
+    n: '03', zh: '年輪', en: 'RINGS', glyph: '輪', desc: '十二個音名繞成一圈，八度往上疊成螺旋，時間往外擴。',
+    points: true, wall: false, lines: 'chain', axes: axesRings, place: placeRings,
+    home: { pos: [1.7, 2.3, 3.9], target: [0, -0.1, 0], fit: 1.18 },
+    rows: [
+      ['圓', '音名', 'C 到 B 十二個音繞成一圈；高一個八度的同名音，落在同一個角度。', 'Shepard 1964 · pitch circularity'],
+      ['高', '八度', '越高的聲音越往上，一圈一圈疊成螺旋。唱一個上行的音階，就會看到點沿著螺旋爬升。', ''],
+      ['外', '時間', '剛發出的聲音在中心附近，隨著時間往外擴，最後消失，像年輪或漣漪。', ''],
+      ['線', '聲音物件', '一段連續的聲音連成一條線。沒有音高的雜音貼在地面，角度由音色決定。', 'Schaeffer 1966 · objet sonore'],
+    ],
+  },
+  water: {
+    n: '04', zh: '水面', en: 'WATER', glyph: '水', desc: '每一個聲音落在水面，擴成一圈圈漣漪；越大聲，波越高。',
+    ridge: 'water', axes: axesWater,
+    home: { pos: [0, 2.2, 4.4], target: [0, -0.85, 0.1], fit: 1.15 },
+    rows: [
+      ['左右', '音高', '聲音落下的位置：低音在左邊，高音在右邊。沒有音高的雜音，位置由音色決定。', ''],
+      ['前後', '音色', '悶的聲音落在後面，尖亮的落在前面。', ''],
+      ['高度', '響度', '越大聲，漣漪越高；安靜下來，水面慢慢回到平靜。', ''],
+      ['波', '漣漪', '每個聲音向外擴成一圈一圈的波，疊在一起時會互相推高、抵消。', ''],
+    ],
+  },
+  ridge: {
+    n: '05', zh: '山脈', en: 'RIDGE', glyph: '山', desc: '每一刻的頻譜畫成一條線，疊成一排山；新的在前，舊的退向遠方。',
+    ridge: 'ridge', axes: axesRidge,
+    home: { pos: [0, 2.35, 4.3], target: [0, -0.5, 0], fit: 1.08 },
+    rows: [
+      ['橫', '頻率', '左邊是低頻，右邊是高頻（對數刻度，每個八度一樣寬）。', ''],
+      ['高', '強度', '山越高，那個頻率上的聲音能量越強。人聲的泛音會長成一排排尖峰。', ''],
+      ['縱深', '時間', '最新的一排在最前面，舊的往遠方退去、最後消失。', ''],
+      ['線', '一個瞬間', '每一條線是某一個瞬間的頻譜；後面的線被前面的山遮住。', ''],
+    ],
+  },
+};
+let model = 'plot';
+const MD = () => MODELS[model];
+
+function buildAxes() {
+  axisGroup.traverse(o => o.geometry && o.geometry.dispose());
+  axisGroup.clear();
+  removeLabels('axes');
+  MD().axes();
+}
+
 // ---------- 狀態與時間（暫停時時間也停；滑鼠指著某顆點時也先停，才讀得到數字） ----------
 let paused = false, frozen = false, holdAt = 0, shift = 0;
 const held = () => paused || frozen;
@@ -459,14 +723,16 @@ let showLines = true, showLabels = true, rotOn = false;
 let lastHeard = 0, silentSince = null, status = 'wait';
 const segs = [];       // 每一段連續的聲音 = 一個聲音物件
 
-// ---------- 麥克風收進來的聲音資料 → 點 ----------
+// ---------- 麥克風收進來的聲音資料 → 點、頻譜列、漣漪 ----------
 function onAudio(m) {
   const now = performance.now() / 1000;
   const rel = m.noise == null ? null : m.db - m.noise;
   Object.assign(S, { rel, pitch: m.pitch_hz || 0, conf: m.pitch_conf ?? 0, cen: m.centroid, seen: now });
   if (rel != null && rel >= cfg.minRel) lastHeard = now;
-  if (held() || rel == null || rel < cfg.minRel) return;
+  if (held()) return;
   const t = clock();
+  if (m.spec && t - lastRow >= Math.max(0.09, cfg.retention / 40)) { lastRow = t; specRows.push({ t, v: m.spec }); }    // 山脈：一刻一列
+  if (rel == null || rel < cfg.minRel) return;
   if (t - lastT > 0.3) segId++;           // 安靜超過 0.3 秒 → 下一個聲音物件，連線在這裡斷開
   lastT = t;
   if (t - lastAdd < 0.04) return;         // 取樣太密的話點會糊成一條，每 40 毫秒留一顆
@@ -477,6 +743,11 @@ function onAudio(m) {
   const p = { slot, t, seg: segId, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0,
               pitched: (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf, x: 0, y: 0, z: 0, d: 0, fade: 1 };
   pts[slot] = p;
+  if (t - lastRipple > 0.15 && ripples.length < 24) {                  // 水面：每個聲音落下一滴
+    lastRipple = t;
+    const bz = logN(p.cen, 300, 4000);
+    ripples.push({ t, x: lerp(-0.85, 0.85, p.pitched ? logN(p.pitch, 80, 1200) : bz), z: lerp(-0.85, 0.85, bz), a: 0.03 + 0.2 * clamp(rel / 40, 0, 1) });
+  }
   let s = segs[segs.length - 1];
   if (!s || s.id !== segId) { s = { id: segId, t0: t, t1: t, n: 0, sumConf: 0, ref: p, max: -1, l: null }; segs.push(s); }
   s.n++; s.sumConf += conf; s.t1 = t;
@@ -500,7 +771,7 @@ function clearAll() {
   pts.fill(null); head = 0;
   aAlpha.array.fill(0); aAlpha.needsUpdate = true;
   for (const s of segs) removeObjLabel(s);
-  segs.length = 0;
+  segs.length = 0; specRows.length = 0; ripples.length = 0;
   lineGeo.setDrawRange(0, 0);
 }
 
@@ -531,31 +802,22 @@ const inkRGB = new THREE.Color();
 function animate(tms) {
   const dt = Math.min(0.05, (tms - lastRaf) / 1000);
   lastRaf = tms;
-  const now = clock(), ret = cfg.retention;
+  const md = MD(), now = clock(), ret = cfg.retention;
   const w = stage.clientWidth, h = stage.clientHeight;
   controls.autoRotate = rotOn && !pointer && !userDrag;
   controls.update();
 
   let alive = 0, nSeg = 0, prev = null, latest = null, best = null, bestD = 1e9;
   inkRGB.set(T['ink-3']);
-  const A = aAlpha.array, Z = aSize.array, M = posMain.array, F = posFloor.array, W = posWall.array;
+  const A = aAlpha.array, Z = aSize.array, M = posMain.array, F = posFloor.array, Wl = posWall.array;
   for (let k = 0; k < CAP; k++) {
     const slot = (head + k) % CAP;
     const p = pts[slot];
     if (!p) { A[slot] = 0; continue; }
     const age = now - p.t;
     if (age > ret) { pts[slot] = null; A[slot] = 0; prev = null; continue; }
-    if (view === 'fire') {
-      // 從發射點射出：音色 = 水平角、音高 = 仰角、響度 = 出口速度；空氣阻力讓它慢慢停下
-      p.az = lerp(-AZ_SPREAD, AZ_SPREAD, logN(p.cen, 300, 4000));
-      p.el = lerp(EL.lo, EL.hi, p.pitched ? logN(p.pitch, PITCH.lo, PITCH.hi) : 0.06 * p.conf);   // 沒有音高的貼近最低
-      const r = (lerp(FLY.vMin, FLY.vMax, clamp(p.rel / 36, 0, 1)) / FLY.drag) * (1 - Math.exp(-FLY.drag * age));
-      aimDir(p.az, p.el, _d);
-      p.x = GUN.x + _d.x * r; p.y = GUN.y + _d.y * r; p.z = GUN.z + _d.z * r;
-    } else {
-      p.x = timeX(age); p.z = brightZ(p.cen);
-      p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;     // 沒有音高的沉在底部，越接近有音高越靠上
-    }
+    if (!md.points) { A[slot] = 0; continue; }
+    md.place(p, age);
     const fade = clamp((ret - age) / (ret * 0.25), 0, 1);
     const pop = age < 0.2 ? 0.5 + 0.5 * (1 - Math.pow(1 - age / 0.2, 3)) : 1;
     p.fade = fade;
@@ -564,14 +826,14 @@ function animate(tms) {
     A[slot] = lerp(0.12, 0.62, p.conf) * fade;
     M[slot * 3] = p.x; M[slot * 3 + 1] = p.y; M[slot * 3 + 2] = p.z;
     F[slot * 3] = p.x; F[slot * 3 + 1] = -1; F[slot * 3 + 2] = p.z;
-    W[slot * 3] = p.x; W[slot * 3 + 1] = p.y; W[slot * 3 + 2] = -1;
+    Wl[slot * 3] = p.x; Wl[slot * 3 + 1] = p.y; Wl[slot * 3 + 2] = -1;
     alive++;
-    if (showLines && view === 'fire') {
+    if (showLines && md.lines === 'rays') {
       const a = 0.2 * fade, i = nSeg * 2;
       linePos.set([GUN.x, GUN.y, GUN.z, p.x, p.y, p.z], i * 3);
       lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
       nSeg++;
-    } else if (showLines && prev && prev.seg === p.seg) {
+    } else if (showLines && md.lines === 'chain' && prev && prev.seg === p.seg) {
       const a = 0.45 * Math.min(fade, prev.fade), i = nSeg * 2;
       linePos.set([prev.x, prev.y, prev.z, p.x, p.y, p.z], i * 3);
       lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
@@ -593,9 +855,12 @@ function animate(tms) {
   lineGeo.setDrawRange(0, nSeg * 2);
   lineGeo.attributes.position.needsUpdate = true;
   lineGeo.attributes.color.needsUpdate = true;
-  lines.visible = showLines;
+  lines.visible = md.points && showLines;
 
-  if (view === 'fire') {                       // 發射管跟著最新的聲音轉；沒聲音時慢慢回到中間
+  if (md.ridge === 'ridge') updateRidge(now);
+  else if (md.ridge === 'water') updateWater(now);
+
+  if (md.emitter) {                            // 發射管跟著最新的聲音轉；沒聲音時慢慢回到中間
     const live = latest && now - latest.t < 0.6;
     const k = 1 - Math.exp(-dt * 10);
     aim.az += ((live ? latest.az : 0) - aim.az) * k;
@@ -607,7 +872,7 @@ function animate(tms) {
     tiltDot.position.set(GUN.x, GUN.y + Math.sin(rad(aim.el)), GUN.z - Math.cos(rad(aim.el)));
   }
 
-  if (latest && !held() && now - latest.t < 1.2) {      // 最新的一顆套一圈朱
+  if (md.points && latest && !held() && now - latest.t < 1.2) {      // 最新的一顆套一圈朱
     ring.visible = true;
     ring.position.set(latest.x, latest.y, latest.z);
     ring.scale.setScalar(latest.d + 0.05);
@@ -626,7 +891,7 @@ function animate(tms) {
     tip.innerHTML = `<div class="t">${zh} <span class="m">${en}</span></div>` +
       `<span class="m">音高</span>${best.pitched ? Math.round(best.pitch) + ' Hz · ' + noteName(best.pitch) : '無明確音高'}<br>` +
       `<span class="m">亮度</span>${fHz(best.cen)}<br>` +
-      (view === 'fire' ? `<span class="m">發射</span>${fAim(best.az, '右', '左')} · ${fAim(best.el, '上', '下').replace('正前方', '水平')}<br>` : '') +
+      (model === 'fire' ? `<span class="m">發射</span>${fAim(best.az, '右', '左')} · ${fAim(best.el, '上', '下').replace('正前方', '水平')}<br>` : '') +
       `<span class="m">響度</span>+${best.rel.toFixed(1)} dB（${best.rms.toFixed(3)}）<br>` +
       `<span class="m">音調度</span>${best.conf.toFixed(2)}<br><span class="m">${(now - best.t).toFixed(1)} 秒前</span>`;
     tip.style.left = Math.min(pointer.cx + 16, innerWidth - tip.offsetWidth - 8) + 'px';
@@ -636,9 +901,10 @@ function animate(tms) {
   for (let i = segs.length - 1; i >= 0; i--) {          // 聲音物件的標籤：標在最大聲的那顆
     const s = segs[i];
     if (pts[s.ref.slot] !== s.ref) { removeObjLabel(s); segs.splice(i, 1); continue; }
-    if (s.l) { s.l.pos.set(s.ref.x, s.ref.y + s.ref.d * 0.5 + 0.05, s.ref.z); s.l.hidden = !showLabels || s.ref.fade < 0.35; }
+    if (s.l) { s.l.pos.set(s.ref.x, s.ref.y + s.ref.d * 0.5 + 0.05, s.ref.z); s.l.hidden = !md.points || !showLabels || s.ref.fade < 0.35; }
   }
 
+  if (md.emitter) { /* 上面已處理 */ }
   hudAcc += dt;
   if (hudAcc > 0.1) { hudAcc = 0; updateNow(performance.now() / 1000, alive); }
   for (const l of labelEls) {
@@ -662,9 +928,10 @@ function resize() {
 }
 new ResizeObserver(resize).observe(stage);
 function homeCamera() {
-  const k = camera.aspect < 0.8 ? clamp(0.7 / camera.aspect, 1, 2.2) : 1;
-  if (view === 'fire') { camera.position.set(1.1 * k, 1.35 * k, 4.2 * k); controls.target.set(0, -0.3, -0.3); }
-  else { camera.position.set(2.3 * k, 1.0 * k, 5.2 * k); controls.target.set(0, -0.2, 0); }
+  const { pos, target, fit } = MD().home;
+  const k = camera.aspect < 0.8 ? (fit ? fit : clamp(0.7 / camera.aspect, 1, 2.2)) : 1;
+  camera.position.set(pos[0] * k, pos[1] * k, pos[2] * k);
+  controls.target.set(...target);
 }
 
 // ---------- 操作 ----------
@@ -684,7 +951,6 @@ cv.addEventListener('pointerup', () => {
   const now = performance.now();
   if (now - tap.t < 350) { homeCamera(); controls.update(); tap.t = 0; } else tap.t = now;
 });
-addEventListener('keydown', e => { if (e.key === '.' || e.code === 'NumpadDecimal') { homeCamera(); controls.update(); } });
 function toggle(id, get, set) {
   $(id).addEventListener('click', () => { const v = !get(); set(v); $(id).setAttribute('aria-pressed', String(v)); });
 }
@@ -701,43 +967,68 @@ $('rRet').addEventListener('input', e => { cfg.retention = +e.target.value; $('o
 $('rMin').addEventListener('input', e => { cfg.minRel = +e.target.value; $('oMin').textContent = cfg.minRel + ' dB'; });
 if (matchMedia('(max-width: 760px)').matches) $('theory').open = false;
 
-// ---------- 兩種看法：圖表、發射（右邊「理論對照」跟著換） ----------
-const ROWS = {
-  plot: [
-    ['X', '時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'],
-    ['Y', '音高', '頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。', 'Smalley 1997 · Wessel 1979'],
-    ['Z', '亮度', '頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。', 'Grey 1977 · timbre space'],
-    ['連線', '聲音物件', '一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。', 'Schaeffer 1966 · objet sonore'],
-  ],
-  fire: [
-    ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
-    ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
-    ['Z', '距離', '響度決定飛多遠：越大聲飛越遠，再被空氣阻力慢慢停下。', 'Chowning 1971 · 響度與距離'],
-    ['連線', '射線', '發射點到每顆泡泡的細線。一串連續的泡泡就是一個聲音物件。', 'Schaeffer 1966 · objet sonore'],
-  ],
-};
+// ---------- 切換模型（像 Claude 的模型選單） ----------
 function renderRows() {
-  const [x, y, z, l] = ROWS[view];
-  for (const [id, [letter, k, desc, cite]] of [['xRow', x], ['yRow', y], ['zRow', z], ['lRow', l]])
-    $(id).innerHTML = `<div class="k"><i>${letter}</i>${k}</div><p>${desc}</p><cite>${cite}</cite>`;
+  MD().rows.forEach(([letter, k, desc, cite], i) => {
+    $('r' + i).innerHTML = `<div class="k"><i>${letter}</i>${k}</div><p>${desc}</p>${cite ? `<cite>${cite}</cite>` : ''}`;
+  });
 }
-function setView(v) {
-  view = v;
-  $('bView').textContent = v === 'fire' ? '畫面：發射' : '畫面：圖表';
-  wallPts.visible = v === 'plot';
-  emitter.visible = v === 'fire';
+function setModel(id) {
+  if (!MODELS[id]) return;
+  model = id;
+  const md = MD();
+  $('modelName').textContent = md.zh;
+  const g = $('ghost');                                   // 背後的大字：淡出、換字、淡入
+  g.classList.add('out');
+  setTimeout(() => { g.textContent = md.glyph; g.classList.remove('out'); }, 260);
+  floorPts.visible = mainPts.visible = !!md.points;
+  wallPts.visible = !!md.points && !!md.wall;
+  emitter.visible = !!md.emitter;
+  ridgeSpec.group.visible = md.ridge === 'ridge';
+  ridgeWater.group.visible = md.ridge === 'water';
+  $('bLine').disabled = $('bLbl').disabled = !md.points;       // 山脈、水面沒有「點之間的連線」和標籤
+  [...$('modelMenu').children].forEach(li => li.setAttribute('aria-selected', String(li.dataset.id === id)));
   renderRows();
   buildAxes();
   homeCamera();
-  try { history.replaceState(null, '', v === 'fire' ? '#fire' : location.pathname + location.search); } catch (e) { /* 沒關係 */ }
+  try { history.replaceState(null, '', id === 'plot' ? location.pathname + location.search : '#' + id); } catch (e) { /* 沒關係 */ }
 }
-$('bView').addEventListener('click', () => setView(view === 'fire' ? 'plot' : 'fire'));
+const menu = $('modelMenu');
+ORDER.forEach(id => {
+  const m = MODELS[id], li = document.createElement('li');
+  li.id = 'opt-' + id; li.dataset.id = id; li.setAttribute('role', 'option');
+  li.innerHTML = `<span class="num">${m.n}</span><span class="nm">${m.zh}<small>${m.en}</small></span><span class="ds">${m.desc}</span>`;
+  li.addEventListener('click', () => { setModel(id); closeMenu(); $('bModel').focus(); });
+  menu.append(li);
+});
+let menuIdx = 0;
+function markActive() { [...menu.children].forEach((li, i) => li.classList.toggle('active', i === menuIdx)); menu.setAttribute('aria-activedescendant', menu.children[menuIdx].id); }
+function openMenu() { menu.hidden = false; $('bModel').setAttribute('aria-expanded', 'true'); menuIdx = ORDER.indexOf(model); markActive(); }
+function closeMenu() { menu.hidden = true; $('bModel').setAttribute('aria-expanded', 'false'); }
+$('bModel').addEventListener('click', () => (menu.hidden ? openMenu() : closeMenu()));
+addEventListener('pointerdown', e => { if (!menu.hidden && !(e.target.closest && e.target.closest('.picker'))) closeMenu(); });
+addEventListener('keydown', e => {
+  if (e.target.matches && e.target.matches('input, textarea')) return;
+  if (!menu.hidden) {
+    if (e.key === 'Escape') { closeMenu(); $('bModel').focus(); }
+    else if (e.key === 'ArrowDown') { menuIdx = (menuIdx + 1) % ORDER.length; markActive(); }
+    else if (e.key === 'ArrowUp') { menuIdx = (menuIdx + ORDER.length - 1) % ORDER.length; markActive(); }
+    else if (e.key === 'Enter' || e.key === ' ') { setModel(ORDER[menuIdx]); closeMenu(); $('bModel').focus(); }
+    else return;
+    e.preventDefault();
+    return;
+  }
+  if (e.key === '.' || e.code === 'NumpadDecimal') { homeCamera(); controls.update(); return; }
+  const n = parseInt(e.key, 10);
+  if (n >= 1 && n <= ORDER.length) setModel(ORDER[n - 1]);
+});
 
 // ---------- 收音：這台裝置的麥克風。打開網頁就自動問，全部在瀏覽器裡分析，不錄音、不上傳 ----------
 const mic = { ctx: null, stream: null, an: null, timer: 0, time: null, warm: [], floor: null };
 const work = new Float32Array(1024);
 const FFT_N = 1024;
 const fftRe = new Float32Array(FFT_N), fftIm = new Float32Array(FFT_N);
+const magArr = new Float32Array(FFT_N / 2);
 const hann = Float32Array.from({ length: FFT_N }, (_, i) => 0.5 - 0.5 * Math.cos(2 * Math.PI * i / (FFT_N - 1)));
 const bitrev = (() => { const r = new Uint16Array(FFT_N), bits = Math.log2(FFT_N); for (let i = 0; i < FFT_N; i++) { let x = i, y = 0; for (let b = 0; b < bits; b++) { y = (y << 1) | (x & 1); x >>= 1; } r[i] = y; } return r; })();
 const cosT = Float32Array.from({ length: FFT_N / 2 }, (_, i) => Math.cos(2 * Math.PI * i / FFT_N));
@@ -787,6 +1078,34 @@ function noiseUpdate(db) {                  // 背景噪音：一開始量 20 �
   else mic.floor += 0.002;
   return mic.floor;
 }
+// 頻譜：80 Hz 到 8 kHz 切成 96 段（對數），每一段各自記住背景，只畫「比背景多出來的」，山才不會被麥克風的底噪撐起來
+let bandFs = 0;
+const bandPos = new Float32Array(BANDS), bandAcc = new Float32Array(BANDS), bandFloor = new Float32Array(BANDS), bandRaw = new Float32Array(BANDS);
+let bandN = 0, bandInit = false;
+function bandsDb(fs) {
+  if (bandFs !== fs) { bandFs = fs; const df = fs / FFT_N; for (let b = 0; b < BANDS; b++) bandPos[b] = B_LO * Math.pow(B_HI / B_LO, b / (BANDS - 1)) / df; }
+  const out = new Float32Array(BANDS);
+  for (let b = 0; b < BANDS; b++) {
+    const pos = Math.min(bandPos[b], FFT_N / 2 - 2), i0 = Math.floor(pos), fr = pos - i0;
+    out[b] = 20 * Math.log10(((1 - fr) * magArr[i0] + fr * magArr[i0 + 1]) / (FFT_N / 4) + 1e-7);
+  }
+  return out;
+}
+function bandVals(bd) {
+  if (!bandInit) {
+    if (mic.floor === null) { for (let b = 0; b < BANDS; b++) bandAcc[b] += bd[b]; bandN++; return null; }
+    for (let b = 0; b < BANDS; b++) bandFloor[b] = bandAcc[b] / Math.max(1, bandN);
+    bandInit = true;
+  }
+  for (let b = 0; b < BANDS; b++) {
+    const d = bd[b];
+    if (d < bandFloor[b] + 4) bandFloor[b] = 0.97 * bandFloor[b] + 0.03 * d; else bandFloor[b] += 0.0015;
+    bandRaw[b] = 1 - Math.exp(-Math.max(0, d - bandFloor[b]) / 24);       // 柔和的壓縮：小聲的細節看得到，大聲也不會頂到天花板
+  }
+  const v = new Float32Array(BANDS);
+  for (let b = 0; b < BANDS; b++) v[b] = 0.25 * bandRaw[Math.max(0, b - 1)] + 0.5 * bandRaw[b] + 0.25 * bandRaw[Math.min(BANDS - 1, b + 1)];
+  return v;
+}
 function analyseBlock(x, fs) {
   const N = FFT_N;
   let mean = 0;
@@ -799,9 +1118,10 @@ function analyseBlock(x, fs) {
   fft();
   const df = fs / N;
   let sw = 0, sm = 0;
-  for (let i = Math.ceil(80 / df); i < N / 2 && i * df < 8000; i++) { const m = Math.hypot(fftRe[i], fftIm[i]); sw += m * i * df; sm += m; }
+  for (let i = 0; i < N / 2; i++) magArr[i] = Math.hypot(fftRe[i], fftIm[i]);
+  for (let i = Math.ceil(80 / df); i < N / 2 && i * df < 8000; i++) { sw += magArr[i] * i * df; sm += magArr[i]; }
   const [f0, conf] = pitchOf(work, fs, Math.min(4000, fs / 6));
-  return { db, rms, centroid: Math.round(sm > 0 ? sw / sm : 0), pitch_hz: +f0.toFixed(1), pitch_conf: +conf.toFixed(2) };
+  return { db, rms, centroid: Math.round(sm > 0 ? sw / sm : 0), pitch_hz: +f0.toFixed(1), pitch_conf: +conf.toFixed(2), bd: bandsDb(fs) };
 }
 function emit(x, fs) {
   const a = analyseBlock(x, fs);
@@ -813,7 +1133,8 @@ function emit(x, fs) {
     silentSince = null;
     if (status === 'silent') { status = 'live'; setStatus('live', LIVE); }
   }
-  onAudio({ db: a.db, noise: noiseUpdate(a.db), centroid: a.centroid, pitch_hz: a.pitch_hz, pitch_conf: a.pitch_conf, rms: +a.rms.toFixed(4) });
+  const noise = noiseUpdate(a.db);
+  onAudio({ db: a.db, noise, centroid: a.centroid, pitch_hz: a.pitch_hz, pitch_conf: a.pitch_conf, rms: +a.rms.toFixed(4), spec: bandVals(a.bd) });
   if (status === 'live' && now - lastHeard > 10) { status = 'quiet'; setStatus('live', '聽不太到聲音。靠近麥克風、大聲一點，或把右邊的「最小響度」調小。'); }
   else if (status === 'quiet' && now - lastHeard < 1) { status = 'live'; setStatus('live', LIVE); }
 }
@@ -854,16 +1175,19 @@ async function startMic() {
   mic.ctx.createMediaStreamSource(mic.stream).connect(mic.an);   // 不接到喇叭，才不會回授
   mic.time = new Float32Array(mic.an.fftSize);
   mic.warm = []; mic.floor = null; silentSince = null; lastHeard = performance.now() / 1000;
+  bandAcc.fill(0); bandN = 0; bandInit = false;
   status = 'wait'; setStatus('wait', '校正背景噪音，請安靜一下…');
   mic.timer = setInterval(micTick, 30);
 }
 
 // ---------- 開始：一打開就自動問麥克風 ----------
 applyTheme();
-matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { applyTheme(); });
 resize();
-setView(location.hash === '#fire' ? 'fire' : 'plot');
-window.__viz = { onMessage: onAudio, setView, getView: () => view, cfg, pts, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic };
+const first = location.hash.slice(1);
+setModel(MODELS[first] ? first : 'plot');
+$('ghost').textContent = MD().glyph;
+window.__viz = { updateWater, updateRidge, onMessage: onAudio, setModel, getModel: () => model, cfg, pts, specRows, ripples, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic };
 requestAnimationFrame(animate);
 startMic();
 </script>
