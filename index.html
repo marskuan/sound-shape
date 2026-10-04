@@ -76,6 +76,7 @@
   .status.bad { color: var(--shu); }
   .now-row { display: flex; gap: 18px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
   .now-row b { font-weight: 500; color: var(--ink); }
+  .now-row em { font-style: normal; }
 
   .theory { top: 28px; right: 30px; width: 300px; max-height: calc(100vh - 90px); overflow: auto; color: var(--ink-2); font-size: 12px; scrollbar-width: none;
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); padding-bottom: 22px; }
@@ -98,6 +99,9 @@
   .set { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 11.5px; padding-top: 10px; }
   .set output { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 38px; text-align: right; }
   input[type=range] { width: 100%; accent-color: var(--ink); height: 14px; }
+  .calt { font-size: 11px; letter-spacing: .25em; color: var(--ink-2); margin: 14px 0 4px; }
+  #bSign { font: inherit; font-size: 12px; background: none; color: var(--ink); border: 1px solid var(--hair); padding: 1px 10px; cursor: pointer; }
+  .hint { font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
   .note { margin: 12px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--ink-3); }
 
   .bar-btns { left: 50%; transform: translateX(-50%); bottom: 24px; display: flex; gap: 4px; }
@@ -107,6 +111,8 @@
   }
   .bar-btns button:hover { color: var(--ink); }
   .bar-btns button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--shu); }
+  #bGun { color: var(--ink); border: 1px solid var(--hair); }
+  #bGun[aria-pressed="true"] { color: var(--paper); background: var(--shu); border-color: var(--shu); }
 
   #tip {
     position: fixed; z-index: 4; pointer-events: none; display: none; white-space: nowrap;
@@ -148,15 +154,15 @@
 <aside class="hud theory" aria-label="理論對照">
   <details open id="theory">
     <summary>理論對照</summary>
-    <div class="row"><div class="k"><i>X</i>時間</div>
+    <div class="row" id="xRow"><div class="k"><i>X</i>時間</div>
       <p>聲音是會展開的形態：起音、持續、結束。</p><cite>Smalley 1997 · spectromorphology</cite></div>
-    <div class="row"><div class="k"><i>Y</i>音高</div>
+    <div class="row" id="yRow"><div class="k"><i>Y</i>音高</div>
       <p>頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。</p><cite>Smalley 1997 · Wessel 1979</cite></div>
-    <div class="row"><div class="k"><i>Z</i>亮度</div>
+    <div class="row" id="zRow"><div class="k"><i>Z</i>亮度</div>
       <p>頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。</p><cite>Grey 1977 · timbre space</cite></div>
     <div class="row"><div class="k"><i>墨色</i>音調 ↔ 噪音</div>
       <p>墨濃是有明確音高（note），墨淡是噪音（noise），之間是含糊的音高（node）。噪音沉在底部的無音高帶。</p><cite>Smalley 1997 · spectral typology</cite></div>
-    <div class="row"><div class="k"><i>連線</i>聲音物件</div>
+    <div class="row" id="lRow"><div class="k"><i>連線</i>聲音物件</div>
       <p>一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。</p><cite>Schaeffer 1966 · objet sonore</cite></div>
     <div class="row"><div class="k"><i>短暫</i>只留幾秒</div>
       <p>點會自己消失，編碼聲音的東西和聲音一樣短暫。</p><cite>SensaBubble, CHI 2014 · ephemeral</cite></div>
@@ -166,6 +172,12 @@
       <div class="size"><i style="width:5px;height:5px"></i><i style="width:10px;height:10px"></i><i style="width:16px;height:16px"></i>點的大小 = 響度</div>
     </div>
     <label class="set">保留<input type="range" id="rRet" min="1" max="60" step="1" value="3"><output id="oRet">3 秒</output></label>
+    <div class="cal" id="calBox" hidden>
+      <div class="calt">校正（發射畫面）</div>
+      <label class="set">伺服 0° 時槍口幾度<input type="range" id="rBase" min="0" max="180" step="5" value="90"><output id="oBase">90°</output></label>
+      <label class="set">角度變大時<button id="bSign" type="button">往上</button></label>
+      <p class="note">角度從正下方算起：正下 = 0°、水平 = 90°、正上 = 180°。調到畫面上的槍管和真的機器一樣。</p>
+    </div>
     <label class="set">最小響度<input type="range" id="rMin" min="2" max="25" step="1" value="6"><output id="oMin">6 dB</output></label>
     <p class="note">這是依文獻做的設計對照，軸的選擇是詮釋，不等於這些文獻自己用的軸。</p>
     <p class="note">按「開始」：有接 MAX9814（接在 Nano 或 Pico 上，用 USB 連電腦）就用它，找不到就用這台電腦的麥克風。聲音只在你的瀏覽器裡分析，不會傳到任何地方。第一次接 MAX9814 要按「接 MAX9814」選一次裝置，之後會自動接上（瀏覽器的安全規定，只有 Chrome、Edge 能用）。</p>
@@ -174,15 +186,22 @@
 
 <footer class="hud foot">
   <div class="status" id="status"><i class="dot"></i><span id="statusText">連線中…</span></div>
-  <div class="now-row"><span>音高 <b id="nPitch">–</b></span><span>亮度 <b id="nCen">–</b></span><span>響度 <b id="nRel">–</b></span><span>點 <b id="nCount">0</b></span></div>
+  <div class="hint">左鍵（手機：單指）旋轉 · 滾輪（雙指）縮放 · 右鍵（雙指拖）移動 · 按 . 或「回中心」回到中心</div>
+  <div class="now-row"><span>音高 <b id="nPitch">–</b></span><span><em id="nZk">亮度</em> <b id="nCen">–</b></span><span>響度 <b id="nRel">–</b></span><span>點 <b id="nCount">0</b></span></div>
 </footer>
 
 <div class="hud bar-btns">
+  <button id="bGun" hidden>槍：運作中</button>
+  <button id="bTestPan" hidden>測試左右</button>
+  <button id="bTestTilt" hidden>測試上下</button>
+  <button id="bView">畫面：圖表</button>
+  <button id="bHome">回中心</button>
   <button id="bPause" aria-pressed="false">暫停</button>
   <button id="bClear">清除</button>
   <button id="bRot" aria-pressed="false">旋轉</button>
   <button id="bLine" aria-pressed="true">連線</button>
   <button id="bLbl" aria-pressed="true">標籤</button>
+  <button id="bZ" hidden>畫法：亮度</button>
   <button id="bStart" aria-pressed="false">開始</button>
   <button id="bUsb">接 MAX9814</button>
   <button id="bDemo" aria-pressed="false">示範</button>
@@ -217,6 +236,32 @@ const pitchY = f => PITCH.bottom + (PITCH.top - PITCH.bottom) * logN(f, PITCH.lo
 const brightZ = c => logN(c, BRIGHT.lo, BRIGHT.hi) * 2 - 1;
 const PITCH_TICKS = [[110, 'A2'], [220, 'A3'], [440, 'A4'], [880, 'A5'], [1760, 'A6'], [3520, 'A7']];
 const BRIGHT_TICKS = [250, 500, 1000, 2000, 4000];
+// 有方向資料時（Pico 的兩顆麥克風），可以換成「方向」模式：左右角度（正 = 右）放在畫面的橫軸，時間改成往深處退。±45° 以外貼在邊上。
+const DIR = { range: 45 };                      // 10 公分間距、30 公分外說話，左右各約 30°，所以 ±45° 就夠
+const dirZ = a => clamp(a / DIR.range, -1, 1);
+const DIR_TICKS = [[-45, '左 45°'], [-30, '30°'], [-15, '15°'], [0, '正前方'], [15, '15°'], [30, '30°'], [45, '右 45°']];
+const fDir = a => Math.abs(a) < 5 ? '正前方' : (a < 0 ? '左 ' : '右 ') + Math.round(Math.abs(a)) + '°';
+const median = a => { const s = [...a].sort((x, y) => x - y); return s[s.length >> 1]; };
+let zMode = 'bright', hasDir = false, zTouched = false;
+let view = 'plot';                               // 'plot' 圖表（時間、音高…）／'fire' 發射（槍固定在一點，聲音變成泡泡射出去）
+
+// ---- 「發射」畫面：把聲音當成槍的瞄準 + 發射，和裝置的對應一樣 ----
+// 水平角 = 方向（再加一點亮度造成的偏移）、仰角 = 音高、飛多遠 = 響度。球座標：方位角、仰角、距離。
+const GUN = { x: 0, y: -0.45, z: 1.25 };         // 槍的位置；泡泡往 −z 飛
+const EL = { lo: -15, hi: 35 };                  // 槍上下轉的範圍（度），和 config.py 的 TILT_LOW_DEG／TILT_HIGH_DEG 一致
+const FLY = { vMin: 0.5, vMax: 2.3, drag: 1.2 }; // 泡泡出口速度（響度決定）和空氣阻力，飛行距離 = 速度 / 阻力
+const AZ_SPREAD = 12, AZ_SPREAD_MONO = 45;       // 亮度造成的左右偏移（度）：有方向資料／只有單一麥克風（和 config.py 一樣）
+// 接了真的機器時（dashboard.py --gun），槍管和泡泡照機器真正的角度畫：
+// 上下伺服 0° = 槍口朝畫面的正上方（90°），角度越大越往前傾（伺服 90° = 水平，110° = 略低於水平）。裝法不同就改這兩個數字。
+// 校正：角度「從正下方算起」（正下 = 0°、水平 = 90°、正上 = 180°）。base = 上下伺服 0° 時槍口的角度，sign = 伺服角度變大時往上（+1）還是往下（−1）。
+const cal = (() => { try { return Object.assign({ base: 90, sign: 1 }, JSON.parse(localStorage.getItem('gunCal') || '{}')); } catch (err) { return { base: 90, sign: 1 }; } })();
+const saveCal = () => { try { localStorage.setItem('gunCal', JSON.stringify(cal)); } catch (err) { /* 沒關係 */ } };
+const labelOfTilt = tilt => cal.base + cal.sign * tilt;            // 從底部算的角度（標在弧上）
+const elOfTilt = tilt => labelOfTilt(tilt) - 90;                   // 畫面上的仰角（水平 = 0°、正上 = 90°）
+const TILT_TICKS = [0, 30, 60, 90, 110];            // 仰角弧上標的伺服角度
+let hasGun = false;
+const rad = d => d * Math.PI / 180;
+const fAim = (a, pos, neg) => Math.abs(a) < 3 ? '正前方' : (a < 0 ? neg : pos) + ' ' + Math.round(Math.abs(a)) + '°';
 const fHz = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + ' kHz' : Math.round(v) + ' Hz';
 const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const noteName = f => { const m = Math.round(69 + 12 * Math.log2(f / 440)); return NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); };
@@ -231,8 +276,11 @@ const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(36, 1, 0.05, 60);
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
-controls.minDistance = 3;
-controls.maxDistance = 20;
+controls.minDistance = 0.8;
+controls.maxDistance = 40;
+controls.enablePan = true;
+controls.screenSpacePanning = true;   // 右鍵（或 Shift＋左鍵）拖移，上下左右平移
+controls.zoomSpeed = 1.2;
 controls.autoRotateSpeed = 0.5;
 
 const T = {};
@@ -248,6 +296,7 @@ const lineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: t
 const ringMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
 const hoverMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
 const inkU = { value: new THREE.Color() };
+const shuMat = new THREE.MeshBasicMaterial(), inkMeshMat = new THREE.MeshBasicMaterial();   // 槍口和瞄準點
 function applyTheme() {
   readTokens();
   scene.background = new THREE.Color(T.paper);
@@ -259,6 +308,8 @@ function applyTheme() {
   ringMat.color.set(T.shu);
   hoverMat.color.set(T.ink);
   inkU.value.set(T.ink);
+  shuMat.color.set(T.shu);
+  inkMeshMat.color.set(T.ink);
 }
 
 // ---- 座標軸：三條細線、地板與背牆的格線、無音高帶 ----
@@ -288,12 +339,62 @@ function timeTicks() {
   return t;
 }
 const timeX = age => (1 - clamp(age / cfg.retention, 0, 1)) * 2 - 1;
+const timeZ = age => 1 - clamp(age / cfg.retention, 0, 1) * 2;      // 方向模式：時間改成前後，現在在最前面
+// 「發射」畫面的座標：地板上以槍為中心的扇形（水平角的放射線 + 距離弧），槍旁邊垂直的弧是仰角（音高）
+function buildFireAxes() {
+  const gx = GUN.x, gy = -1, gz = GUN.z;                          // 槍在地板上的投影
+  const arc = (r, a0, a1, step, f, mat) => {                      // 一段圓弧，f(角度, 半徑) → 位置
+    let prev = f(a0, r);
+    for (let a = a0 + step; a <= a1 + 1e-6; a += step) { const q = f(a, r); axisGroup.add(seg(prev, q, mat)); prev = q; }
+  };
+  const floorAt = (a, r) => V(gx + r * Math.sin(rad(a)), gy, gz - r * Math.cos(rad(a)));
+  for (const [a, name] of DIR_TICKS) {                            // 水平角：放射線
+    axisGroup.add(seg(floorAt(a, 0.1), floorAt(a, 2.15), a === 0 ? axisMat : hairMat));
+    addLabel(name, floorAt(a, 2.3));
+  }
+  for (const r of [0.5, 1.0, 1.5, 2.0]) arc(r, -46, 46, 4, floorAt, hairMat);   // 距離弧
+  addLabel('小聲', floorAt(0, 0.5).add(V(0.13, 0, 0)), 'tick');
+  addLabel('大聲', floorAt(0, 2.0).add(V(0.13, 0, 0)), 'tick');
+  const tiltAt = (e, r) => V(gx, GUN.y + r * Math.sin(rad(e)), gz - r * Math.cos(rad(e)));
+  if (hasGun) {                                                   // 接了機器：弧上標「從底部算的角度」（正下 0°、水平 90°、正上 180°）
+    const e0 = elOfTilt(0), e1 = elOfTilt(110);
+    arc(1.0, Math.min(e0, e1), Math.max(e0, e1), 3, tiltAt, axisMat);
+    for (const t of TILT_TICKS) {
+      const e = elOfTilt(t);
+      axisGroup.add(seg(tiltAt(e, 0.96), tiltAt(e, 1.06), axisMat));
+      addLabel(`${Math.round(labelOfTilt(t))}°`, tiltAt(e, 1.13), 'tick');
+    }
+    addLabel('仰角 TILT<small>從底部算起</small>', tiltAt(Math.max(e0, e1) + 6, 1.1), 'title');
+  } else {
+    arc(1.0, EL.lo, EL.hi, 3, tiltAt, axisMat);                   // 仰角弧
+    for (const [f, name] of PITCH_TICKS) {                        // 仰角的刻度 = 音高
+      const e = lerp(EL.lo, EL.hi, logN(f, PITCH.lo, PITCH.hi));
+      axisGroup.add(seg(tiltAt(e, 0.96), tiltAt(e, 1.06), axisMat));
+      addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, tiltAt(e, 1.13), 'tick');
+    }
+    addLabel('仰角 TILT<small>音高</small>', tiltAt(EL.hi + 8, 1.0), 'title');
+  }
+  addLabel('水平角 PAN<small>方向</small>', V(gx, gy - 0.02, gz + 0.5), 'title');
+  addLabel('距離<small>響度</small>', floorAt(34, 2.0).add(V(0.15, 0, 0)), 'title');
+}
 function buildAxes() {
   axisGroup.traverse(o => o.geometry && o.geometry.dispose());
   axisGroup.clear();
   removeLabels('axes');
+  if (view === 'fire') { buildFireAxes(); return; }
   const tt = timeTicks();
-  for (const a of tt) {                                // 時間：背牆直線、地板直線
+  if (zMode === 'dir') {
+    for (const a of tt) {                              // 時間：地板橫線，現在在最前面，越舊越往深處退
+      const z = timeZ(a);
+      axisGroup.add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
+      addLabel(a === 0 ? '現在' : '−' + a + ' s', V(1.16, -1.05, z));
+    }
+    for (const [a, name] of DIR_TICKS) {               // 方向：背牆直線、地板直線，左右就是畫面的左右
+      const x = dirZ(a);
+      axisGroup.add(seg(V(x, -1, -1), V(x, 1, -1), hairMat), seg(V(x, -1, -1), V(x, -1, 1), hairMat));
+      addLabel(name, V(x, -1.05, 1.12));
+    }
+  } else for (const a of tt) {                         // 時間：背牆直線、地板直線
     const x = timeX(a);
     axisGroup.add(seg(V(x, -1, -1), V(x, 1, -1), hairMat), seg(V(x, -1, -1), V(x, -1, 1), hairMat));
     addLabel(a === 0 ? '現在' : '−' + a + ' s', V(x, -1.05, 1.08));
@@ -303,19 +404,29 @@ function buildAxes() {
     axisGroup.add(seg(V(-1, y, -1), V(1, y, -1), hairMat));
     addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, V(-1.05, y, 1.06), 'tick');
   }
-  for (const c of BRIGHT_TICKS) {                      // 亮度：地板橫線
-    const z = brightZ(c);
-    axisGroup.add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
-    addLabel(fHz(c).replace(' ', ''), V(1.07, -1.05, z));
+  if (zMode !== 'dir') {
+    for (const c of BRIGHT_TICKS) {                    // 亮度：地板橫線
+      const z = brightZ(c);
+      axisGroup.add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
+      addLabel(fHz(c).replace(' ', ''), V(1.07, -1.05, z));
+    }
   }
   axisGroup.add(seg(V(-1, -1, 1), V(1, -1, 1), axisMat), seg(V(-1, -1, 1), V(-1, 1, 1), axisMat), seg(V(1, -1, 1), V(1, -1, -1), axisMat));
   axisGroup.add(seg(V(-1, STRIP_TOP, -1), V(1, STRIP_TOP, -1), stripMat));
-  axisGroup.add(seg(V(1, -1, -1), V(1, 1, -1), nowMat));
-  addLabel('現在', V(1, 1.08, -1), 'now');
+  if (zMode === 'dir') axisGroup.add(seg(V(-1, -1, 1), V(1, -1, 1), nowMat));      // 現在 = 最前面那條
+  else {
+    axisGroup.add(seg(V(1, -1, -1), V(1, 1, -1), nowMat));
+    addLabel('現在', V(1, 1.08, -1), 'now');
+  }
   addLabel('無音高<small>noise</small>', V(-1.05, (STRIP_TOP - 1) / 2 + 0.04, -1), 'tick');
-  addLabel('時間<small>TIME</small>', V(0, -1.2, 1.12), 'title');
   addLabel('音高<small>PITCH</small>', V(-1.2, 1.14, 1.0), 'title');
-  addLabel('亮度<small>BRIGHTNESS</small>', V(1.9, -1.08, -0.1), 'title');
+  if (zMode === 'dir') {
+    addLabel('方向<small>DIRECTION</small>', V(0, -1.22, 1.2), 'title');
+    addLabel('時間<small>TIME</small>', V(1.6, -1.08, 0), 'title');
+  } else {
+    addLabel('時間<small>TIME</small>', V(0, -1.2, 1.12), 'title');
+    addLabel('亮度<small>BRIGHTNESS</small>', V(1.9, -1.08, -0.1), 'title');
+  }
 }
 
 // ---- 點：一顆一顆的墨點，投影在地板和背牆上的淡影 ----
@@ -360,8 +471,25 @@ function makePoints(posAttr, sizeMul, alphaMul) {
   return p;
 }
 makePoints(posFloor, 0.55, 0.28);
-makePoints(posWall, 0.55, 0.28);
+const wallPts = makePoints(posWall, 0.55, 0.28);      // 背牆的淡影只在圖表畫面有
 makePoints(posMain, 1, 1);
+
+// 槍：一根朱色的槍管跟著瞄準轉，底座是墨色的球；地板弧和仰角弧上各有一個瞄準點（左右轉、上下轉）
+const gun = new THREE.Group();
+const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.026, 0.3, 18), shuMat);
+const base = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 14), inkMeshMat);
+const panDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), shuMat);
+const tiltDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), shuMat);
+base.position.set(GUN.x, GUN.y, GUN.z);
+gun.add(barrel, base, panDot, tiltDot);
+gun.visible = false;
+scene.add(gun);
+const aim = { az: 0, el: lerp(EL.lo, EL.hi, 0.3) };    // 槍現在瞄的方向
+const _d = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+function aimDir(az, el, out) {                          // 方位角（正 = 右）、仰角 → 單位向量，槍口朝 −z
+  const ce = Math.cos(rad(el));
+  return out.set(Math.sin(rad(az)) * ce, Math.sin(rad(el)), -Math.cos(rad(az)) * ce);
+}
 
 const linePos = new Float32Array(CAP * 2 * 3), lineCol = new Float32Array(CAP * 2 * 4);
 const lineGeo = new THREE.BufferGeometry();
@@ -396,7 +524,8 @@ function setHold(nextPaused, nextFrozen) {
   if (held() && !wasHeld) holdAt = cur;
   else if (!held() && wasHeld) shift = raw - holdAt;
 }
-const S = { rel: null, pitch: 0, conf: 0, cen: null, seen: -9 };
+const S = { rel: null, pitch: 0, conf: 0, cen: null, dir: null, seen: -9 };
+const dirBuf = [], dirPending = [];        // 這一個聲音物件最近幾塊的方向；還沒有方向可用的點
 let liveSeen = false, demo = false, showLines = true, showLabels = true, rotOn = false;
 let silent = false, silentSince = null, micOn = false;
 const isLocal = ['localhost', '127.0.0.1', '[::1]'].includes(location.hostname);   // 從 dashboard.py 開的才有硬體資料
@@ -408,6 +537,7 @@ function onMessage(m, fromDemo = false, fromMic = false) {
   if (m.type === 'audio' && micOn && !fromMic && !fromDemo) return;   // 開了瀏覽器的麥克風，就不聽伺服器送來的
   if (!fromDemo && demo) stopDemo();
   if (m.type === 'nano') {
+    updateGunUi(m.gun);
     if (!fromDemo && !demo && !silent) setStatus(m.connected ? (liveSeen ? 'live' : 'wait') : 'bad',
       m.connected ? (liveSeen ? '即時' : '已連上，等聲音…') : 'Nano 斷線了，等它重新連上…');
   } else if (m.type === 'audio') onAudio(m, fromDemo);
@@ -426,19 +556,29 @@ function onAudio(m, fromDemo) {
   }
   const rel = m.noise == null ? null : m.db - m.noise;
   Object.assign(S, { rel, pitch: m.pitch_hz || 0, conf: m.pitch_conf ?? 0, cen: m.centroid, seen: now });
+  if (m.gun) { S.pose = m.gun; if (!hasGun) { hasGun = true; refreshView(); } }
   if (held() || rel == null || rel < cfg.minRel) return;
   const t = clock();
-  if (t - lastT > 0.3) segId++;           // 安靜超過 0.3 秒 → 下一個聲音物件，連線在這裡斷開
+  if (t - lastT > 0.3) { segId++; dirBuf.length = 0; dirPending.length = 0; }   // 安靜超過 0.3 秒 → 下一個聲音物件，連線在這裡斷開
   lastT = t;
+  if (typeof m.dir === 'number') {         // 每一小塊算出來的角度會亂跳，取最近 9 塊（約 0.2 秒）的中位數
+    dirBuf.push(m.dir);
+    if (dirBuf.length > 9) dirBuf.shift();
+    if (!hasDir) { hasDir = true; refreshView(); }
+    if (!zTouched && zMode === 'bright' && !fromDemo) setZ('dir', true);   // 有方向資料就先看方向，想看亮度按「畫法」鈕
+  }
+  S.dir = dirBuf.length >= 3 ? median(dirBuf) : null;   // 少於 3 塊不算數（一個離群值就會把開頭的點帶偏），之後再回頭補
   if (t - lastAdd < 0.04) return;         // 取樣太密的話點會糊成一條，每 40 毫秒留一顆
   lastAdd = t;
   const slot = head;
   head = (head + 1) % CAP;
   const conf = clamp(m.pitch_conf ?? 0, 0, 1);
-  const p = { slot, t, seg: segId, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0,
+  const p = { slot, t, seg: segId, pose: m.gun || null, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0, dir: S.dir,
               pitched: (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf, x: 0, y: 0, z: 0, d: 0, fade: 1 };
   pts[slot] = p;
   total++;
+  if (p.dir == null) dirPending.push(p);
+  else if (dirPending.length) { for (const q of dirPending) if (pts[q.slot] === q) q.dir = p.dir; dirPending.length = 0; }
   let s = segs[segs.length - 1];
   if (!s || s.id !== segId) { s = { id: segId, t0: t, t1: t, n: 0, sumConf: 0, ref: p, max: -1, l: null }; segs.push(s); }
   s.n++; s.sumConf += conf; s.t1 = t;
@@ -471,7 +611,7 @@ function setStatus(cls, text) { $('status').className = 'status ' + cls; $('stat
 function updateNow(now, alive) {
   const fresh = now - S.seen < 1.5 && S.rel != null && S.rel >= cfg.minRel;
   $('nPitch').textContent = fresh ? (S.pitch > 0 && S.conf >= PITCH.minConf ? Math.round(S.pitch) + ' Hz · ' + noteName(S.pitch) : '無明確音高') : '–';
-  $('nCen').textContent = fresh ? fHz(S.cen) : '–';
+  $('nCen').textContent = fresh ? (showsDir() ? (S.dir == null ? '–' : fDir(S.dir)) : fHz(S.cen)) : '–';
   $('nRel').textContent = S.rel != null && now - S.seen < 1.5 ? (S.rel >= 0 ? '+' : '') + S.rel.toFixed(0) + ' dB' : '–';
   $('nCount').textContent = alive;
 }
@@ -499,9 +639,22 @@ function animate(tms) {
     if (!p) { A[slot] = 0; continue; }
     const age = now - p.t;
     if (age > ret) { pts[slot] = null; A[slot] = 0; prev = null; continue; }
-    p.x = timeX(age);
-    p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;     // 沒有音高的沉在底部，越接近有音高越靠上
-    p.z = brightZ(p.cen);
+    if (view === 'fire') {
+      // 從槍口射出：方向 = 水平角（加上亮度的小偏移）、音高 = 仰角、響度 = 出口速度；空氣阻力讓它慢慢停下
+      if (p.pose) { p.az = p.pose.az; p.el = elOfTilt(p.pose.tilt); }      // 機器真正的角度
+      else {
+        const spread = hasDir ? AZ_SPREAD : AZ_SPREAD_MONO;
+        p.az = (p.dir ?? 0) + lerp(-spread, spread, logN(p.cen, 300, 4000));
+        p.el = lerp(EL.lo, EL.hi, p.pitched ? logN(p.pitch, PITCH.lo, PITCH.hi) : 0.06 * p.conf);   // 沒有音高的貼近最低
+      }
+      const r = (lerp(FLY.vMin, FLY.vMax, clamp(p.rel / 36, 0, 1)) / FLY.drag) * (1 - Math.exp(-FLY.drag * age));
+      aimDir(p.az, p.el, _d);
+      p.x = GUN.x + _d.x * r; p.y = GUN.y + _d.y * r; p.z = GUN.z + _d.z * r;
+    } else {
+      if (zMode === 'dir') { p.x = dirZ(p.dir ?? 0); p.z = timeZ(age); }   // 方向還算不出來的點（太小聲）先放在正前方
+      else { p.x = timeX(age); p.z = brightZ(p.cen); }
+      p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;     // 沒有音高的沉在底部，越接近有音高越靠上
+    }
     const fade = clamp((ret - age) / (ret * 0.25), 0, 1);
     const pop = age < 0.2 ? 0.5 + 0.5 * (1 - Math.pow(1 - age / 0.2, 3)) : 1;
     p.fade = fade;
@@ -512,7 +665,12 @@ function animate(tms) {
     F[slot * 3] = p.x; F[slot * 3 + 1] = -1; F[slot * 3 + 2] = p.z;
     W[slot * 3] = p.x; W[slot * 3 + 1] = p.y; W[slot * 3 + 2] = -1;
     alive++;
-    if (showLines && prev && prev.seg === p.seg) {
+    if (showLines && view === 'fire') {                       // 槍口到每顆泡泡的細線
+      const a = 0.2 * fade, i = nSeg * 2;
+      linePos.set([GUN.x, GUN.y, GUN.z, p.x, p.y, p.z], i * 3);
+      lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
+      nSeg++;
+    } else if (showLines && prev && prev.seg === p.seg) {
       const a = 0.45 * Math.min(fade, prev.fade);
       const i = nSeg * 2;
       linePos.set([prev.x, prev.y, prev.z, p.x, p.y, p.z], i * 3);
@@ -537,6 +695,21 @@ function animate(tms) {
   lineGeo.attributes.color.needsUpdate = true;
   lines.visible = showLines;
 
+  // 槍口跟著最新的聲音轉；沒聲音時慢慢回到正前方
+  if (view === 'fire') {
+    const live = latest && now - latest.t < 0.6;
+    const k = 1 - Math.exp(-dt * 10);
+    const gaz = hasGun && S.pose ? S.pose.az : (live ? latest.az : 0);
+    const gel = hasGun && S.pose ? elOfTilt(S.pose.tilt) : (live ? latest.el : lerp(EL.lo, EL.hi, 0.3));
+    aim.az += (gaz - aim.az) * k;
+    aim.el += (gel - aim.el) * k;
+    aimDir(aim.az, aim.el, _d);
+    barrel.position.set(GUN.x + _d.x * 0.17, GUN.y + _d.y * 0.17, GUN.z + _d.z * 0.17);
+    barrel.quaternion.setFromUnitVectors(_up, _d);
+    panDot.position.set(GUN.x + Math.sin(rad(aim.az)), -1, GUN.z - Math.cos(rad(aim.az)));
+    tiltDot.position.set(GUN.x, GUN.y + Math.sin(rad(aim.el)), GUN.z - Math.cos(rad(aim.el)));
+  }
+
   // 最新的一顆套一圈朱
   if (latest && !held() && now - latest.t < 1.2) {
     ring.visible = true;
@@ -559,6 +732,8 @@ function animate(tms) {
     tip.innerHTML = `<div class="t">${zh} <span class="m">${en}</span></div>` +
       `<span class="m">音高</span>${best.pitched ? Math.round(best.pitch) + ' Hz · ' + noteName(best.pitch) : '無明確音高'}<br>` +
       `<span class="m">亮度</span>${fHz(best.cen)}<br>` +
+      (hasDir ? `<span class="m">方向</span>${best.dir == null ? '–（太小聲，算不出）' : fDir(best.dir)}<br>` : '') +
+      (view === 'fire' ? `<span class="m">槍口</span>${fAim(best.az, '右', '左')} · ${fAim(best.el, '上', '下').replace('正前方', '水平')}<br>` : '') +
       `<span class="m">響度</span>+${best.rel.toFixed(1)} dB（${best.rms.toFixed(3)}）<br>` +
       `<span class="m">音調度</span>${best.conf.toFixed(2)}<br><span class="m">${(now - best.t).toFixed(1)} 秒前</span>`;
     const tw = tip.offsetWidth;
@@ -604,6 +779,94 @@ toggle('bPause', () => paused, v => {
   $('bPause').textContent = v ? '繼續' : '暫停';
 });
 $('bClear').addEventListener('click', clearAll);
+$('bHome').addEventListener('click', () => { homeCamera(); controls.update(); });   // 手機沒有鍵盤，用按鈕
+addEventListener('keydown', e => {                      // 按 . ：縮放、位置、角度都回到預設的中心
+  if (e.key === '.' || e.code === 'NumpadDecimal') { homeCamera(); controls.update(); }
+});
+// 左邊那欄的「理論對照」：每個畫面、每種畫法，各軸對應什麼
+const TIME_ROW = ['時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'];
+const PITCH_ROW = ['音高', '頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。', 'Smalley 1997 · Wessel 1979'];
+const OBJ_ROW = ['聲音物件', '一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。', 'Schaeffer 1966 · objet sonore'];
+const BRIGHT_ROW = ['亮度', '頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。', 'Grey 1977 · timbre space'];
+const DIR_ROW = ['方向', '兩顆麥克風聽到同一個聲音的時間差，算出聲音從左邊還是右邊來。這是量測到的位置，不是文獻的音色軸。', 'Knapp & Carter 1976 · GCC-PHAT'];
+const FIRE_ROWS = [
+  ['水平角 Pan', '槍左右轉的角度 = 聲音的方向（兩顆麥克風的時間差），再加上音色亮暗造成的一點偏移。只有單一麥克風時，只剩音色造成的偏移。', 'Knapp & Carter 1976 · GCC-PHAT'],
+  ['仰角 Tilt', '槍上下轉的角度 = 音高（對照你自己平常的音高）。接了機器時，畫面照機器真正的角度畫；角度從正下方算起（正下 0°、水平 90°、正上 180°），左下角「校正」可以調。', 'Pratt 1930 · Rusconi et al. 2006'],
+  ['距離', '泡泡飛多遠 = 響度：越大聲，泵越快，泡泡飛得越遠，再被空氣阻力慢慢停下。', 'Chowning 1971 · 響度與距離'],
+  ['射線', '槍口到每顆泡泡的細線。一串連續的泡泡就是一個聲音物件。', 'Schaeffer 1966 · objet sonore'],
+];
+function renderRows() {
+  const set = (id, letter, [k, desc, cite]) => { $(id).innerHTML = `<div class="k"><i>${letter}</i>${k}</div><p>${desc}</p><cite>${cite}</cite>`; };
+  if (view === 'fire') {
+    set('xRow', 'X', FIRE_ROWS[0]); set('yRow', 'Y', FIRE_ROWS[1]); set('zRow', 'Z', FIRE_ROWS[2]); set('lRow', '連線', FIRE_ROWS[3]);
+  } else {
+    set('xRow', 'X', zMode === 'dir' ? DIR_ROW : TIME_ROW);
+    set('yRow', 'Y', PITCH_ROW);
+    set('zRow', 'Z', zMode === 'dir' ? [TIME_ROW[0], '現在在最前面，越舊的點越往深處退。' + TIME_ROW[1], TIME_ROW[2]] : BRIGHT_ROW);
+    set('lRow', '連線', OBJ_ROW);
+  }
+}
+const showsDir = () => view === 'fire' ? hasDir : zMode === 'dir';     // 底部那格顯示方向還是亮度
+function refreshView() {
+  renderRows();
+  $('bView').textContent = view === 'fire' ? '畫面：發射' : '畫面：圖表';
+  $('bZ').hidden = view === 'fire' || !hasDir;
+  $('bZ').textContent = zMode === 'dir' ? '畫法：方向' : '畫法：亮度';
+  $('nZk').textContent = showsDir() ? '方向' : '亮度';
+  wallPts.visible = view === 'plot';
+  $('calBox').hidden = !(view === 'fire' && hasGun);
+  gun.visible = view === 'fire';
+  buildAxes();
+}
+function setZ(mode, auto = false) {
+  zMode = mode;
+  if (!auto) zTouched = true;
+  refreshView();
+}
+function setView(v) {
+  if (v === view) return;
+  view = v;
+  refreshView();
+  homeCamera();
+  try { history.replaceState(null, '', v === 'fire' ? '#fire' : location.pathname + location.search); } catch (err) { /* data: 網址等不能改 */ }
+}
+$('bZ').addEventListener('click', () => setZ(zMode === 'dir' ? 'bright' : 'dir'));
+$('bView').addEventListener('click', () => setView(view === 'fire' ? 'plot' : 'fire'));
+$('rBase').value = cal.base; $('oBase').textContent = cal.base + '°'; $('bSign').textContent = cal.sign > 0 ? '往上' : '往下';
+$('rBase').addEventListener('input', e => { cal.base = +e.target.value; $('oBase').textContent = cal.base + '°'; saveCal(); buildAxes(); });
+$('bSign').addEventListener('click', () => { cal.sign = -cal.sign; $('bSign').textContent = cal.sign > 0 ? '往上' : '往下'; saveCal(); buildAxes(); });
+
+// ---- 控制真正的機器（只有用 dashboard.py --gun 開的時候才會出現）----
+const post = body => fetch('/cmd', { method: 'POST', body: JSON.stringify(body) }).catch(() => {});
+function updateGunUi(g) {
+  const show = g !== null && g !== undefined;
+  for (const id of ['bGun', 'bTestPan', 'bTestTilt']) $(id).hidden = !show;
+  if (show && !testing) {
+    $('bGun').textContent = g ? '槍：運作中' : '槍：暫停';
+    $('bGun').setAttribute('aria-pressed', String(!g));
+  }
+}
+let testing = false;
+function toggleGun() {
+  if ($('bGun').hidden) return;
+  const resume = $('bGun').getAttribute('aria-pressed') === 'true';     // 現在是暫停 → 這次按是恢復
+  $('bGun').textContent = resume ? '槍：運作中' : '槍：暫停';           // 先改畫面，不等伺服器回報
+  $('bGun').setAttribute('aria-pressed', String(!resume));
+  post({ do: 'gun', on: resume });
+}
+$('bGun').addEventListener('click', toggleGun);
+addEventListener('keydown', e => { if (e.code === 'Space' && !e.repeat) { e.preventDefault(); toggleGun(); } });   // 空白鍵也可以暫停
+for (const [id, axis] of [['bTestPan', 'pan'], ['bTestTilt', 'tilt']]) {
+  $(id).addEventListener('click', () => {
+    if (testing) return;
+    testing = true;
+    const label = $(id).textContent;
+    $(id).textContent = '測試中…';
+    $('bGun').textContent = '槍：測試中';
+    post({ do: 'test', axis });
+    setTimeout(() => { testing = false; $(id).textContent = label; }, 9000);
+  });
+}
 $('rRet').addEventListener('input', e => { cfg.retention = +e.target.value; $('oRet').textContent = cfg.retention + ' 秒'; buildAxes(); });
 $('rMin').addEventListener('input', e => { cfg.minRel = +e.target.value; $('oMin').textContent = cfg.minRel + ' dB'; });
 if (matchMedia('(max-width: 760px)').matches) $('theory').open = false;
@@ -620,8 +883,13 @@ function resize() {
 new ResizeObserver(resize).observe(stage);
 function homeCamera() {
   const k = camera.aspect < 0.8 ? clamp(0.7 / camera.aspect, 1, 2.2) : 1;
-  camera.position.set(2.3 * k, 1.0 * k, 5.2 * k);
-  controls.target.set(0, -0.2, 0);
+  if (view === 'fire') {                                   // 站在槍的正後方偏上，看它朝前方射出去的扇形：左就是畫面左，右就是畫面右
+    camera.position.set(1.1 * k, 1.35 * k, 4.2 * k);
+    controls.target.set(0, -0.3, -0.3);
+  } else {
+    camera.position.set(2.3 * k, 1.0 * k, 5.2 * k);
+    controls.target.set(0, -0.2, 0);
+  }
 }
 
 // ---------- 示範：沒有硬體也能看（母音、鳥叫、嘶聲、悶響、含糊的音） ----------
@@ -630,6 +898,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 function startDemo() {
   if (demo) return;
   demo = true;
+  if (zMode === 'dir') setZ('bright', true);      // 示範的聲音沒有方向
   const token = ++demoToken;
   $('bDemo').setAttribute('aria-pressed', 'true');
   setStatus('demo', isLocal ? '示範（模擬的聲音，沒有接硬體）' : '示範（模擬的聲音）。按下面的「開始」，換成你自己的聲音');
@@ -928,7 +1197,8 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme
 buildAxes();
 resize();
 homeCamera();
-window.__viz = { onMessage, startDemo, stopDemo, cfg, pts, camera, controls, renderer, scene, segs, animate, held, pitchOf, micTick, mic, emit, analyseBlock, feedNano, feedPico, startAuto, startSerial, stopAll, serTick, getSer: () => ser };   // 方便在瀏覽器主控台除錯
+if (location.hash === '#fire') setView('fire');          // 網址後面加 #fire 就直接開發射畫面
+window.__viz = { setZ, getZ: () => zMode, setView, getView: () => view, aim, onMessage, startDemo, stopDemo, cfg, pts, camera, controls, renderer, scene, segs, animate, held, pitchOf, micTick, mic, emit, analyseBlock, feedNano, feedPico, startAuto, startSerial, stopAll, serTick, getSer: () => ser };   // 方便在瀏覽器主控台除錯
 requestAnimationFrame(animate);   // 先啟動畫面，連線出任何問題都不會讓畫面空白
 connect();
 </script>
