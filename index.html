@@ -8,7 +8,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23d4402a'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23f3f0e8' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Chiron+Sung+HK:wght@300;400&family=Chiron+Hei+HK:wght@400&family=Jost:wght@400;500&display=swap" rel="stylesheet">
 <style>
   /* 和紙與墨：一張紙、一種墨、一點朱。其餘都留白。 */
   :root {
@@ -20,8 +20,10 @@
     --hair: #dedacd;
     --axis: #b9b4a6;
     --shu: #d4402a;
-    --serif: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif TC", "PMingLiU", serif;
-    --sans: system-ui, "Microsoft JhengHei", "PingFang TC", sans-serif;
+    /* 字型：標題和名稱用「昭源宋體」（Chiron Sung，細緻的明體），內文用「昭源黑體」，英文和數字用 Jost（幾何、清瘦）。
+       載不到網路字型時，退回各系統自己的明體／黑體。 */
+    --serif: "Chiron Sung HK", "Noto Serif TC", "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", "PMingLiU", serif;
+    --sans: "Jost", "Chiron Hei HK", system-ui, "Microsoft JhengHei", "PingFang TC", sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
@@ -57,18 +59,18 @@
 
   /* 背後一個很淡、微微暈開的大字：像海報上的大標。只當氣氛，不擋任何東西 */
   .ghost {
-    position: fixed; z-index: 1; right: 1vw; bottom: -9vh; font: 500 60vh/1 var(--serif); color: var(--ink); opacity: .045;
+    position: fixed; z-index: 1; right: 1vw; bottom: -9vh; font: 300 60vh/1 var(--serif); color: var(--ink); opacity: .045;
     filter: blur(1.6px); pointer-events: none; user-select: none; transition: opacity .5s ease; white-space: nowrap;
   }
   .ghost.out { opacity: 0; }
 
   .hud { position: fixed; z-index: 2; }
   .head { top: 28px; left: 30px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
-  .head h1 { margin: 0; font: 500 22px/1 var(--serif); letter-spacing: 0.45em; writing-mode: vertical-rl; }
+  .head h1 { margin: 0; font: 400 22px/1 var(--serif); letter-spacing: 0.45em; writing-mode: vertical-rl; }
   .head::after { content: ""; width: 1px; height: 15vh; margin-left: 10.5px; background: var(--axis); }   /* 一條極細的線，往下垂 */
   .seal {
     width: 22px; height: 22px; background: var(--shu); color: var(--paper); display: grid; place-items: center;
-    font: 500 14px/1 var(--serif); border-radius: 2px;
+    font: 400 14px/1 var(--serif); border-radius: 2px;
   }
 
   .foot { left: 30px; bottom: 26px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); max-width: 330px; }
@@ -85,7 +87,7 @@
   .theory { top: 28px; right: 30px; width: 300px; max-height: calc(100vh - 90px); overflow: auto; color: var(--ink-2); font-size: 12px; scrollbar-width: none;
     -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); padding-bottom: 22px; }
   .theory::-webkit-scrollbar { display: none; }
-  .theory summary { cursor: pointer; list-style: none; font: 500 14px/1 var(--serif); letter-spacing: 0.3em; color: var(--ink); padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+  .theory summary { cursor: pointer; list-style: none; font: 400 14px/1 var(--serif); letter-spacing: 0.3em; color: var(--ink); padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
   .theory summary::-webkit-details-marker { display: none; }
   .theory summary::after { content: "－"; float: right; color: var(--ink-3); font-family: var(--sans); letter-spacing: 0; }
   .theory details:not([open]) summary::after { content: "＋"; }
@@ -120,7 +122,7 @@
   .picker { position: relative; display: flex; align-items: center; }
   .bar-btns .picker > button { display: inline-flex; align-items: baseline; gap: 12px; padding: 4px 4px 5px 0; color: var(--ink); border-bottom: 1px solid var(--ink); letter-spacing: 0; }
   .picker .cap { font-size: 10px; letter-spacing: .25em; color: var(--ink-3); }
-  .picker .nm { font: 500 14px/1 var(--serif); letter-spacing: .3em; }
+  .picker .nm { font: 400 14px/1 var(--serif); letter-spacing: .3em; }
   .picker svg { width: 9px; height: 9px; stroke: currentColor; fill: none; stroke-width: 1.5; align-self: center; transition: transform .2s ease; }
   .picker button[aria-expanded="true"] svg { transform: rotate(180deg); }
   .menu {
@@ -133,7 +135,7 @@
   .menu li:hover, .menu li.active { background: color-mix(in srgb, var(--ink) 5%, transparent); }
   .menu li[aria-selected="true"]::before { content: ""; position: absolute; left: 8px; top: 18px; width: 6px; height: 6px; background: var(--shu); }
   .menu .num { font-size: 10px; letter-spacing: .12em; color: var(--ink-3); padding-top: 5px; font-variant-numeric: tabular-nums; }
-  .menu .nm { font: 500 15px/1.4 var(--serif); letter-spacing: .3em; color: var(--ink); }
+  .menu .nm { font: 400 15px/1.4 var(--serif); letter-spacing: .3em; color: var(--ink); }
   .menu .nm small { font: 9.5px var(--sans); letter-spacing: .22em; color: var(--ink-3); margin-left: 12px; }
   .menu .ds { grid-column: 2; font-size: 11.5px; line-height: 1.7; color: var(--ink-2); }
 
@@ -142,7 +144,7 @@
     background: var(--paper); border: 1px solid var(--axis); padding: 8px 12px; font-size: 12px; line-height: 1.7;
     font-variant-numeric: tabular-nums; color: var(--ink);
   }
-  #tip .t { font: 500 13px/1.4 var(--serif); letter-spacing: 0.15em; margin-bottom: 2px; }
+  #tip .t { font: 400 13px/1.4 var(--serif); letter-spacing: 0.15em; margin-bottom: 2px; }
   #tip .m { color: var(--ink-3); margin-right: 6px; }
   #fatal { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center; padding: 24px; background: var(--paper); }
   #fatal[hidden] { display: none; }
@@ -187,14 +189,16 @@
     <div class="row" id="r1"></div>
     <div class="row" id="r2"></div>
     <div class="row" id="r3"></div>
-    <div class="row"><div class="k"><i>墨色</i>音調 ↔ 噪音</div>
-      <p>墨濃是有明確音高（note），墨淡是噪音（noise），之間是含糊的音高（node）。</p><cite>Smalley 1997 · spectral typology</cite></div>
+    <div class="row" id="rc"></div>
+    <div class="row" id="rInk"><div class="k"><i>濃淡</i>音調 ↔ 噪音</div>
+      <p>點越濃，是越清楚的音高（note）；越淡，是噪音（noise）；之間是含糊的音高（node）。</p><cite>Smalley 1997 · spectral typology</cite></div>
     <div class="row"><div class="k"><i>短暫</i>只留幾秒</div>
       <p>點會自己消失，編碼聲音的東西和聲音一樣短暫。</p><cite>SensaBubble, CHI 2014 · ephemeral</cite></div>
 
-    <div class="legend">
+    <div class="legend" id="legend">
+      <div><div class="bar" id="barCol"></div><div class="scale"><span id="legL"></span><span id="legR"></span></div></div>
       <div><div class="bar"></div><div class="scale"><span>note 音調</span><span>node</span><span>noise 噪音</span></div></div>
-      <div class="size"><i style="width:5px;height:5px"></i><i style="width:10px;height:10px"></i><i style="width:16px;height:16px"></i>點的大小 = 響度</div>
+      <div class="size"><i style="width:4px;height:4px"></i><i style="width:8px;height:8px"></i><i style="width:13px;height:13px"></i><span id="legSize">點雲的大小 = 響度</span></div>
     </div>
     <label class="set">保留<input type="range" id="rRet" min="1" max="60" step="1" value="3"><output id="oRet">3 秒</output></label>
     <label class="set">最小響度<input type="range" id="rMin" min="2" max="25" step="1" value="6"><output id="oMin">6 dB</output></label>
@@ -298,7 +302,6 @@ const nowMat = new THREE.LineBasicMaterial({ transparent: true, opacity: 0.7 });
 const lineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
 const ringMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
 const hoverMat = new THREE.SpriteMaterial({ transparent: true, depthWrite: false, depthTest: false });
-const inkU = { value: new THREE.Color() };
 const shuMat = new THREE.MeshBasicMaterial(), inkMeshMat = new THREE.MeshBasicMaterial();
 const ridgeLineMat = new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false });
 const ridgeFillMat = new THREE.MeshBasicMaterial({ polygonOffset: true, polygonOffsetFactor: 1, polygonOffsetUnits: 1, side: THREE.DoubleSide });
@@ -311,10 +314,10 @@ function applyTheme() {
   nowMat.color.set(T.shu);
   ringMat.color.set(T.shu);
   hoverMat.color.set(T.ink);
-  inkU.value.set(T.ink);
   shuMat.color.set(T.shu);
   inkMeshMat.color.set(T.ink);
   ridgeFillMat.color.set(T.paper);
+  applyCloud();
 }
 
 // ---- 座標軸與標籤 ----
@@ -558,52 +561,155 @@ function updateWater(now) {
   }
 }
 
-// ---- 點：一顆一顆的墨點（周圍有一圈暈開的墨），投影在地板和背牆上的淡影 ----
+// ---- 點雲：每一個聲音是一小團很細的點（40 顆）。每顆點的顏色只由「它在哪裡」決定：同一個位置，永遠同一個顏色 ----
+// 一團 = 一個實例。CPU 每幀只替每一團寫 8 個數字（位置、半徑、不透明度、年齡、密度、亂數），
+// 團裡每顆點的位置、大小、顏色都在顯示卡的頂點著色器裡算（亂數種子是固定的，所以同一顆點每一幀都在同一個地方）。
+// 地板和背牆上的淡影，是同一份資料再畫兩次（著色器把它壓扁），不用另外的記憶體。
 const CAP = 3000;
 const pts = new Array(CAP).fill(null);
-let head = 0, segId = 0, lastT = -9, lastAdd = -9;
-const aSize = new THREE.BufferAttribute(new Float32Array(CAP), 1).setUsage(THREE.DynamicDrawUsage);
-const aAlpha = new THREE.BufferAttribute(new Float32Array(CAP), 1).setUsage(THREE.DynamicDrawUsage);
-const posMain = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
-const posFloor = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
-const posWall = new THREE.BufferAttribute(new Float32Array(CAP * 3), 3).setUsage(THREE.DynamicDrawUsage);
-const HALO = 1.7;                              // 精靈比墨點本體大 1.7 倍，多出來的是暈開的墨
-const pointVert = `
-  attribute float aSize; attribute float aAlpha;
-  uniform float uScale; uniform float uSizeMul; varying float vAlpha;
+let head = 0, tail = 0, count = 0, segId = 0, lastT = -9, lastAdd = -9;
+const NP = 41;                                   // 一團 = 1 片很淡的暈 + 40 顆小點
+const cloudGeo = new THREE.InstancedBufferGeometry();
+{
+  const corner = new Float32Array(NP * 4 * 3), seed = new Float32Array(NP * 4 * 4), idx = new Uint16Array(NP * 6);
+  let s = 20261004;
+  const rnd = () => ((s = (Math.imul(s, 1664525) + 1013904223) >>> 0) / 4294967296);
+  const C4 = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  for (let i = 0; i < NP; i++) {
+    const a = rnd(), b = rnd(), c = rnd(), rank = (i * 0.6180339887) % 1;     // rank 用黃金比例數列：只留前幾成的點，也分得很均勻
+    for (let k = 0; k < 4; k++) {
+      corner.set([C4[k][0], C4[k][1], i === 0 ? 1 : 0], (i * 4 + k) * 3);
+      seed.set([a, b, c, rank], (i * 4 + k) * 4);
+    }
+    idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
+  }
+  cloudGeo.setAttribute('position', new THREE.BufferAttribute(corner, 3));      // xy = 方片的角，z = 1 表示那一片是暈
+  cloudGeo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 4));
+  cloudGeo.setIndex(new THREE.BufferAttribute(idx, 1));
+}
+const iPos = new THREE.InstancedBufferAttribute(new Float32Array(CAP * 4), 4).setUsage(THREE.DynamicDrawUsage);    // xyz = 中心，w = 半徑
+const iAttr = new THREE.InstancedBufferAttribute(new Float32Array(CAP * 4), 4).setUsage(THREE.DynamicDrawUsage);   // 不透明度、年齡(0~1)、密度、這一團的亂數
+cloudGeo.setAttribute('iPos', iPos);
+cloudGeo.setAttribute('iAttr', iAttr);
+cloudGeo.instanceCount = 0;
+
+const cloudVert = `
+  attribute vec4 aSeed; attribute vec4 iPos; attribute vec4 iAttr;
+  uniform float uScale, uTime, uDens, uMix, uMode, uAlpha, uGrow, uDot, uRad, uPixMin;
+  uniform vec2 uRes; uniform vec4 uLin; uniform vec3 uOrigin, uInk, uWheel; uniform vec3 uPal[6];
+  varying vec3 vCol; varying float vA; varying vec2 vUV; varying float vHalo;
+  vec3 ramp(float t) {
+    float f = clamp(t, 0.0, 1.0) * 5.0; int i = int(min(floor(f), 4.0));
+    return mix(uPal[i], uPal[i + 1], f - float(i));
+  }
+  vec3 hsl(float h, float s, float l) {
+    vec3 k = mod(vec3(0.0, 8.0, 4.0) + h * 12.0, 12.0);
+    return vec3(l) - s * min(l, 1.0 - l) * max(vec3(-1.0), min(min(k - 3.0, 9.0 - k), vec3(1.0)));
+  }
   void main() {
-    vec4 mv = modelViewMatrix * vec4(position, 1.0);
+    float halo = position.z;
+    vHalo = halo; vUV = position.xy; vCol = uInk; vA = 0.0;
+    vec3 sd = fract(aSeed.xyz + iAttr.w * vec3(1.0, 0.618, 0.382));          // 每一團自己的樣子不一樣
+    float rank = fract(aSeed.w + iAttr.w * 0.7);
+    bool shown = halo > 0.5 ? iAttr.z > 0.02 : rank < iAttr.z * uDens;       // 小聲、或畫質降低時，只留一部分點
+    if (!shown) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
+    float R = iPos.w * (1.0 + uGrow * iAttr.y);                              // 越久越散開
+    float th = 6.2831853 * sd.x, cz = 2.0 * sd.y - 1.0, sz = sqrt(max(0.0, 1.0 - cz * cz));
+    vec3 off = vec3(sz * cos(th), cz, sz * sin(th)) * R * pow(sd.z, 0.8);    // 中間比較密、邊緣比較稀
+    off += 0.09 * R * vec3(sin(uTime * 0.9 + sd.x * 31.0), sin(uTime * 0.7 + sd.y * 29.0), sin(uTime * 1.1 + sd.z * 23.0));   // 極輕的呼吸
+    if (halo > 0.5) off = vec3(0.0);
+    vec3 wp = iPos.xyz + off;
+
+    // 顏色 = 位置的函數（每個模型自己的規則，見 MODELS[*].cloud）
+    float t = uLin.w + dot(wp, uLin.xyz) + uRad * length(wp - uOrigin);
+    t += 0.045 * sin(wp.x * 7.0 + wp.y * 3.0) * sin(wp.z * 6.0 - wp.y * 5.0);   // 很細的顆粒變化，仍然只看位置
+    vec3 col = uWheel.x > 0.0
+      ? hsl(fract(atan(wp.x + 1e-5, -wp.z) / 6.2831853), uWheel.x, mix(uWheel.y, uWheel.z, clamp(wp.y * 0.5 + 0.5, 0.0, 1.0)))
+      : ramp(t);
+    vCol = mix(uInk, col, uMix);
+
+    if (uMode > 1.5) wp.z = -1.0; else if (uMode > 0.5) wp.y = -1.0;           // 淡影：壓到背牆／地板上
+    vec4 mv = modelViewMatrix * vec4(wp, 1.0);
+    float diam = halo > 0.5 ? R * 3.2 : uDot * (0.55 + 0.9 * fract(sd.x * 7.13 + sd.z * 3.31));
+    float px = clamp(diam * uScale / -mv.z, halo > 0.5 ? 6.0 : uPixMin, halo > 0.5 ? 180.0 : 14.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = max(aSize * uSizeMul * uScale / -mv.z, 1.5) * ${HALO.toFixed(2)};
-    vAlpha = aAlpha;
+    gl_Position.xy += position.xy * 0.5 * px * (2.0 / uRes) * gl_Position.w;
+    vA = iAttr.x * uAlpha * (halo > 0.5 ? 0.09 : 1.0);
   }`;
-const pointFrag = `
-  uniform vec3 uInk; uniform float uAlphaMul; varying float vAlpha;
+const cloudFrag = `
+  varying vec3 vCol; varying float vA; varying vec2 vUV; varying float vHalo;
   void main() {
-    vec2 p = gl_PointCoord * 2.0 - 1.0;
-    float r = length(p) * ${HALO.toFixed(2)};
-    if (r > ${HALO.toFixed(2)}) discard;
-    float core = 1.0 - smoothstep(0.86, 1.0, r);
-    float wet = 0.8 + 0.2 * smoothstep(0.5, 0.92, r);                       // 墨乾了邊緣比較深
-    float halo = (1.0 - smoothstep(1.0, ${HALO.toFixed(2)}, r)) * 0.2;      // 暈開的墨
-    gl_FragColor = vec4(uInk, vAlpha * uAlphaMul * max(core * wet, halo));
+    float r = length(vUV);
+    if (r > 1.0) discard;
+    float a = vHalo > 0.5 ? (1.0 - r) * (1.0 - r) : 1.0 - smoothstep(0.55, 1.0, r);
+    gl_FragColor = vec4(vCol, vA * a);
   }`;
 const scaleU = { value: 800 };
-function makePoints(posAttr, sizeMul, alphaMul) {
-  const g = new THREE.BufferGeometry();
-  g.setAttribute('position', posAttr); g.setAttribute('aSize', aSize); g.setAttribute('aAlpha', aAlpha);
+const cu = {                                     // 三個網格（本體、地板影、背牆影）共用的 uniform
+  uScale: scaleU, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uPixMin: { value: 1.3 },
+  uGrow: { value: 0.6 }, uDot: { value: 0.015 }, uRad: { value: 0 }, uLin: { value: new THREE.Vector4() }, uOrigin: { value: new THREE.Vector3() },
+  uInk: { value: new THREE.Vector3() }, uWheel: { value: new THREE.Vector3() }, uPal: { value: Array.from({ length: 6 }, () => new THREE.Vector3()) },
+};
+function makeCloud(mode, dens, mix, alpha) {
   const m = new THREE.ShaderMaterial({
-    transparent: true, depthWrite: false, vertexShader: pointVert, fragmentShader: pointFrag,
-    uniforms: { uScale: scaleU, uInk: inkU, uSizeMul: { value: sizeMul }, uAlphaMul: { value: alphaMul } },
+    transparent: true, depthWrite: false, vertexShader: cloudVert, fragmentShader: cloudFrag,
+    uniforms: { ...cu, uMode: { value: mode }, uDens: { value: dens }, uMix: { value: mix }, uAlpha: { value: alpha } },
   });
-  const p = new THREE.Points(g, m);
-  p.frustumCulled = false;
-  scene.add(p);
-  return p;
+  const mesh = new THREE.Mesh(cloudGeo, m);
+  mesh.frustumCulled = false;
+  scene.add(mesh);
+  return mesh;
 }
-const floorPts = makePoints(posFloor, 0.55, 0.28);
-const wallPts = makePoints(posWall, 0.55, 0.28);
-const mainPts = makePoints(posMain, 1, 1);
+const cloudFloor = makeCloud(1, 0.45, 0.3, 0.3);
+const cloudWall = makeCloud(2, 0.45, 0.3, 0.3);
+const cloudMain = makeCloud(0, 1, 1, 1);
+
+// 配色：每個模型有自己的色階（亮色／深色背景各一組，不是自動反相，是分別挑過的）
+const PAL = {
+  land:  { light: ['#5b2f86', '#3c4cab', '#1f80a0', '#2e9b6a', '#6f9a1c', '#c98a0c'], dark: ['#8a63cf', '#6483ee', '#46b0cf', '#52cb92', '#b4dc55', '#f4cd5c'] },   // 山水：紫 → 藍 → 青 → 綠 → 金
+  ember: { light: ['#d4402a', '#df7a26', '#c79a1c', '#4f9a78', '#3a6fa8', '#5b3f8c'], dark: ['#ee6a4d', '#f0954a', '#e0bc4c', '#6cc3a0', '#6a9bdc', '#9578d0'] },  // 餘燼：朱 → 橙 → 金 → 青磁 → 藍 → 紫
+};
+const WHEEL = { light: [0.46, 0.36, 0.56], dark: [0.42, 0.54, 0.74] };          // 色相環：[彩度, 最低的亮度, 最高的亮度]
+const hex3 = h => { const n = parseInt(h.replace('#', ''), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
+const hslCss = (h, s, l) => `hsl(${(h * 360).toFixed(0)}deg ${(s * 100).toFixed(0)}% ${(l * 100).toFixed(0)}%)`;
+const isDark = () => new THREE.Color(T.paper).r < 0.3;
+function applyCloud() {                         // 換模型、換深淺色時：把這個模型的配色、大小規則送給著色器，也畫圖例的色條
+  cu.uInk.value.set(...hex3(T['ink-3']));
+  const md = MODELS[model], c = md && md.cloud;
+  if (!c) return;
+  const dk = isDark() ? 'dark' : 'light';
+  cu.uLin.value.set(...c.lin);
+  cu.uRad.value = c.rad || 0;
+  cu.uOrigin.value.set(...(c.origin || [0, 0, 0]));
+  cu.uGrow.value = c.grow;
+  cu.uDot.value = c.dot;
+  let bar;
+  if (c.wheel) {
+    cu.uWheel.value.set(...WHEEL[dk]);
+    const [s, l0, l1] = WHEEL[dk];
+    bar = 'linear-gradient(to right,' + Array.from({ length: 13 }, (_, i) => hslCss(i / 12, s, (l0 + l1) / 2)).join(',') + ')';
+  } else {
+    cu.uWheel.value.set(0, 0, 0);
+    const pal = PAL[c.pal][dk];
+    pal.forEach((h, i) => cu.uPal.value[i].set(...hex3(h)));
+    bar = 'linear-gradient(to right,' + pal.join(',') + ')';
+  }
+  $('barCol').style.background = bar;
+  $('legL').textContent = md.legend[0];
+  $('legR').textContent = md.legend[1];
+  $('legSize').textContent = md.legend[2];
+}
+
+// 畫質：偵測到畫面跑不動就自己降低（先降解析度、再減少點數）。只往下調，不會來回跳動
+const QUAL = [{ dpr: 1, dens: 0.45 }, { dpr: 1.5, dens: 0.7 }, { dpr: 2, dens: 1 }];
+const perf = { level: QUAL.length - 1, ema: 0.0167, since: 0, auto: true };
+function setQuality(l) {
+  perf.level = l;
+  renderer.setPixelRatio(Math.min(devicePixelRatio || 1, QUAL[l].dpr));
+  cloudMain.material.uniforms.uDens.value = QUAL[l].dens;
+  cloudFloor.material.uniforms.uDens.value = cloudWall.material.uniforms.uDens.value = QUAL[l].dens * 0.45;
+  resize();
+}
 
 // 發射點：一根朱色的短管跟著最新的聲音轉，底座是墨色的球；地板弧和仰角弧上各有一個瞄準點
 const emitter = new THREE.Group();
@@ -645,6 +751,10 @@ const MODELS = {
     n: '01', zh: '圖表', en: 'PLOT', glyph: '圖', desc: '橫是時間，上是音高，前是音色。最直接的一張圖。',
     points: true, wall: true, lines: 'chain', axes: axesPlot, place: placePlot,
     home: { pos: [2.3, 1.0, 5.2], target: [0, -0.2, 0] },
+    // 顏色 = 位置的函數：t = lin·(x,y,z) + off，山水色階。上下（音高）占最多，其次是音色和時間
+    cloud: { pal: 'land', lin: [0.10, 0.90, 0.20, 0.66], R0: 0.03, Rk: 0.09, grow: 0.6, dot: 0.018 },
+    legend: ['低音', '高音', '點雲的大小 = 響度'],
+    crow: ['色', '位置 → 顏色', '顏色只由位置決定：同一個位置永遠是同一個顏色。從下到上是紫、藍、青、綠、金，主要跟著音高，音色和時間只帶一點點偏移。', ''],
     rows: [
       ['X', '時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'],
       ['Y', '音高', '頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。', 'Smalley 1997 · Wessel 1979'],
@@ -656,6 +766,10 @@ const MODELS = {
     n: '02', zh: '發射', en: 'EMIT', glyph: '射', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
     points: true, wall: false, lines: 'rays', emitter: true, axes: axesFire, place: placeFire,
     home: { pos: [1.1, 1.35, 4.2], target: [0, -0.3, -0.3] },
+    // 顏色看離發射口多遠（餘燼色階：近是朱，遠是紫）；越遠點雲越散
+    cloud: { pal: 'ember', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 1.8, dot: 0.016 },
+    legend: ['近　剛射出', '遠　快消失', '大小 = 響度；越遠越散開'],
+    crow: ['色', '距離 → 顏色', '剛離開發射口是朱紅，越飛越遠，依序變成橙、金、青磁、藍，最後是紫。越遠，點雲也越散、越淡。', 'Chowning 1971 · 距離線索'],
     rows: [
       ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
       ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
@@ -667,6 +781,10 @@ const MODELS = {
     n: '03', zh: '年輪', en: 'RINGS', glyph: '輪', desc: '十二個音名繞成一圈，八度往上疊成螺旋，時間往外擴。',
     points: true, wall: false, lines: 'chain', axes: axesRings, place: placeRings,
     home: { pos: [1.7, 2.3, 3.9], target: [0, -0.1, 0], fit: 1.18 },
+    // 色相 = 繞著中軸的角度（也就是音名），亮度 = 高度（八度）
+    cloud: { wheel: true, lin: [0, 0, 0, 0], R0: 0.026, Rk: 0.07, grow: 0.25, dot: 0.018 },
+    legend: ['C', 'B　繞一圈回到 C', '點雲的大小 = 響度'],
+    crow: ['色', '音名 → 色相', '色相就是音名：每一個 C 都是同一個顏色，十二個音繞一圈，色相也繞一圈回到原點。亮度跟著八度，越高越亮。', 'Shepard 1964 · pitch circularity'],
     rows: [
       ['圓', '音名', 'C 到 B 十二個音繞成一圈；高一個八度的同名音，落在同一個角度。', 'Shepard 1964 · pitch circularity'],
       ['高', '八度', '越高的聲音越往上，一圈一圈疊成螺旋。唱一個上行的音階，就會看到點沿著螺旋爬升。', ''],
@@ -739,9 +857,10 @@ function onAudio(m) {
   lastAdd = t;
   const slot = head;
   head = (head + 1) % CAP;
+  if (count === CAP) tail = (tail + 1) % CAP; else count++;       // 滿了就把最舊的那一顆讓出來
   const conf = clamp(m.pitch_conf ?? 0, 0, 1);
   const p = { slot, t, seg: segId, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0,
-              pitched: (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf, x: 0, y: 0, z: 0, d: 0, fade: 1 };
+              pitched: (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf, x: 0, y: 0, z: 0, d: 0, fade: 1, seed: Math.random() };
   pts[slot] = p;
   if (t - lastRipple > 0.15 && ripples.length < 24) {                  // 水面：每個聲音落下一滴
     lastRipple = t;
@@ -768,8 +887,8 @@ function removeObjLabel(s) {
   s.l = null;
 }
 function clearAll() {
-  pts.fill(null); head = 0;
-  aAlpha.array.fill(0); aAlpha.needsUpdate = true;
+  pts.fill(null); head = tail = count = 0;
+  cloudGeo.instanceCount = 0;
   for (const s of segs) removeObjLabel(s);
   segs.length = 0; specRows.length = 0; ripples.length = 0;
   lineGeo.setDrawRange(0, 0);
@@ -800,8 +919,12 @@ let pointer = null, userDrag = false, rotTimer = 0, scalePx = 800, lastRaf = per
 const inkRGB = new THREE.Color();
 
 function animate(tms) {
-  const dt = Math.min(0.05, (tms - lastRaf) / 1000);
+  const raw = (tms - lastRaf) / 1000, dt = Math.min(0.05, raw);
   lastRaf = tms;
+  if (perf.auto && raw < 0.25) {                       // 畫面持續跑不到 36 fps，就降一級畫質（切到別的分頁回來的那一幀不算）
+    perf.ema += (raw - perf.ema) * 0.04;
+    if (perf.ema > 0.028 && perf.level > 0 && tms - perf.since > 2500) { setQuality(perf.level - 1); perf.since = tms; perf.ema = 0.0167; }
+  }
   const md = MD(), now = clock(), ret = cfg.retention;
   const w = stage.clientWidth, h = stage.clientHeight;
   controls.autoRotate = rotOn && !pointer && !userDrag;
@@ -809,34 +932,36 @@ function animate(tms) {
 
   let alive = 0, nSeg = 0, prev = null, latest = null, best = null, bestD = 1e9;
   inkRGB.set(T['ink-3']);
-  const A = aAlpha.array, Z = aSize.array, M = posMain.array, F = posFloor.array, Wl = posWall.array;
-  for (let k = 0; k < CAP; k++) {
-    const slot = (head + k) % CAP;
-    const p = pts[slot];
-    if (!p) { A[slot] = 0; continue; }
+  while (count > 0) {                                  // 過期的從最舊的那頭收掉（點是照時間排的，不用整圈掃）
+    const o = pts[tail];
+    if (o && now - o.t <= ret) break;
+    pts[tail] = null; tail = (tail + 1) % CAP; count--;
+  }
+  const IP = iPos.array, IA = iAttr.array, cl = md.cloud;
+  let n = 0;
+  if (md.points) for (let k = 0; k < count; k++) {
+    const p = pts[(tail + k) % CAP];
     const age = now - p.t;
-    if (age > ret) { pts[slot] = null; A[slot] = 0; prev = null; continue; }
-    if (!md.points) { A[slot] = 0; continue; }
     md.place(p, age);
-    const fade = clamp((ret - age) / (ret * 0.25), 0, 1);
+    const a01 = clamp(age / ret, 0, 1), fade = clamp((ret - age) / (ret * 0.25), 0, 1);
     const pop = age < 0.2 ? 0.5 + 0.5 * (1 - Math.pow(1 - age / 0.2, 3)) : 1;
+    const loud = clamp(p.rel / 40, 0, 1);
+    const R = (cl.R0 + cl.Rk * Math.pow(loud, 1.2)) * pop;               // 這一團的半徑：響度（各模型的係數不同）
     p.fade = fade;
-    p.d = (0.02 + 0.085 * Math.pow(clamp(p.rel / 40, 0, 1), 1.2)) * fade * pop;
-    Z[slot] = p.d;
-    A[slot] = lerp(0.12, 0.62, p.conf) * fade;
-    M[slot * 3] = p.x; M[slot * 3 + 1] = p.y; M[slot * 3 + 2] = p.z;
-    F[slot * 3] = p.x; F[slot * 3 + 1] = -1; F[slot * 3 + 2] = p.z;
-    Wl[slot * 3] = p.x; Wl[slot * 3 + 1] = p.y; Wl[slot * 3 + 2] = -1;
+    p.d = 2 * R * (1 + cl.grow * a01);                                   // 點擊、標籤、朱圈用的直徑
+    const i4 = n++ * 4;
+    IP[i4] = p.x; IP[i4 + 1] = p.y; IP[i4 + 2] = p.z; IP[i4 + 3] = R;
+    IA[i4] = lerp(0.3, 0.88, p.conf) * fade; IA[i4 + 1] = a01; IA[i4 + 2] = lerp(0.4, 1, loud); IA[i4 + 3] = p.seed;
     alive++;
     if (showLines && md.lines === 'rays') {
-      const a = 0.2 * fade, i = nSeg * 2;
-      linePos.set([GUN.x, GUN.y, GUN.z, p.x, p.y, p.z], i * 3);
-      lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
+      const a = 0.2 * fade, i = nSeg * 6, j = nSeg * 8;
+      linePos[i] = GUN.x; linePos[i + 1] = GUN.y; linePos[i + 2] = GUN.z; linePos[i + 3] = p.x; linePos[i + 4] = p.y; linePos[i + 5] = p.z;
+      lineCol[j] = lineCol[j + 4] = inkRGB.r; lineCol[j + 1] = lineCol[j + 5] = inkRGB.g; lineCol[j + 2] = lineCol[j + 6] = inkRGB.b; lineCol[j + 3] = lineCol[j + 7] = a;
       nSeg++;
     } else if (showLines && md.lines === 'chain' && prev && prev.seg === p.seg) {
-      const a = 0.45 * Math.min(fade, prev.fade), i = nSeg * 2;
-      linePos.set([prev.x, prev.y, prev.z, p.x, p.y, p.z], i * 3);
-      lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
+      const a = 0.45 * Math.min(fade, prev.fade), i = nSeg * 6, j = nSeg * 8;
+      linePos[i] = prev.x; linePos[i + 1] = prev.y; linePos[i + 2] = prev.z; linePos[i + 3] = p.x; linePos[i + 4] = p.y; linePos[i + 5] = p.z;
+      lineCol[j] = lineCol[j + 4] = inkRGB.r; lineCol[j + 1] = lineCol[j + 5] = inkRGB.g; lineCol[j + 2] = lineCol[j + 6] = inkRGB.b; lineCol[j + 3] = lineCol[j + 7] = a;
       nSeg++;
     }
     prev = p; latest = p;
@@ -851,7 +976,12 @@ function animate(tms) {
       }
     }
   }
-  for (const a of [aAlpha, aSize, posMain, posFloor, posWall]) a.needsUpdate = true;
+  cloudGeo.instanceCount = n;
+  cu.uTime.value = now;
+  if (n) for (const a of [iPos, iAttr]) {              // 只把用到的那一小段送上顯示卡
+    if (a.clearUpdateRanges) { a.clearUpdateRanges(); a.addUpdateRange(0, n * 4); }
+    a.needsUpdate = true;
+  }
   lineGeo.setDrawRange(0, nSeg * 2);
   lineGeo.attributes.position.needsUpdate = true;
   lineGeo.attributes.color.needsUpdate = true;
@@ -923,8 +1053,11 @@ function resize() {
   camera.aspect = w / h;
   camera.fov = camera.aspect < 0.8 ? 55 : 36;      // 直向的手機用廣角，方塊才不會縮成一小塊
   camera.updateProjectionMatrix();
-  scalePx = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(camera.fov * Math.PI / 360));
+  const buf = renderer.getDrawingBufferSize(new THREE.Vector2());
+  scalePx = buf.y / (2 * Math.tan(camera.fov * Math.PI / 360));
   scaleU.value = scalePx;
+  cu.uRes.value.copy(buf);
+  cu.uPixMin.value = 1.3 * renderer.getPixelRatio();       // 最小的點至少 1.3 個螢幕像素，高解析度的手機上才看得到
 }
 new ResizeObserver(resize).observe(stage);
 function homeCamera() {
@@ -972,6 +1105,8 @@ function renderRows() {
   MD().rows.forEach(([letter, k, desc, cite], i) => {
     $('r' + i).innerHTML = `<div class="k"><i>${letter}</i>${k}</div><p>${desc}</p>${cite ? `<cite>${cite}</cite>` : ''}`;
   });
+  const c = MD().crow;
+  $('rc').innerHTML = c ? `<div class="k"><i>${c[0]}</i>${c[1]}</div><p>${c[2]}</p>${c[3] ? `<cite>${c[3]}</cite>` : ''}` : '';
 }
 function setModel(id) {
   if (!MODELS[id]) return;
@@ -981,8 +1116,10 @@ function setModel(id) {
   const g = $('ghost');                                   // 背後的大字：淡出、換字、淡入
   g.classList.add('out');
   setTimeout(() => { g.textContent = md.glyph; g.classList.remove('out'); }, 260);
-  floorPts.visible = mainPts.visible = !!md.points;
-  wallPts.visible = !!md.points && !!md.wall;
+  cloudMain.visible = cloudFloor.visible = !!md.points;
+  cloudWall.visible = !!md.points && !!md.wall;
+  for (const id of ['rc', 'rInk', 'legend']) $(id).style.display = md.points ? '' : 'none';     // 山脈、水面沒有點，也就沒有點的顏色和濃淡
+  applyCloud();
   emitter.visible = !!md.emitter;
   ridgeSpec.group.visible = md.ridge === 'ridge';
   ridgeWater.group.visible = md.ridge === 'water';
@@ -1187,7 +1324,7 @@ resize();
 const first = location.hash.slice(1);
 setModel(MODELS[first] ? first : 'plot');
 $('ghost').textContent = MD().glyph;
-window.__viz = { updateWater, updateRidge, onMessage: onAudio, setModel, getModel: () => model, cfg, pts, specRows, ripples, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic };
+window.__viz = { updateWater, updateRidge, onMessage: onAudio, setModel, getModel: () => model, cfg, pts, specRows, ripples, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic, setQuality, perf, cu, cloudGeo, MODELS, applyCloud, scene, renderer, THREE };
 requestAnimationFrame(animate);
 startMic();
 </script>
