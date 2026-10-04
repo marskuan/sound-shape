@@ -4,151 +4,127 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>聲音的形狀</title>
-<meta name="description" content="對著麥克風說話、唱歌或拍手，看見聲音的 3D 形狀。聲音只在你的裝置上即時分析，不會錄音，也不會上傳。">
-<meta name="theme-color" content="#151412" media="(prefers-color-scheme: dark)">
-<meta name="theme-color" content="#f3f0e8" media="(prefers-color-scheme: light)">
+<meta name="description" content="用麥克風把你的聲音即時變成 3D 的形狀：時間、音高、亮度。聲音只在你的瀏覽器裡分析，不會上傳。">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23d4402a'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23f3f0e8' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* 和紙與墨：一張紙、一種墨、一點朱。朱只留給「現在最該按的那一顆」。 */
+  /* 和紙與墨：一張紙、一種墨、一點朱。其餘都留白。 */
   :root {
     color-scheme: light;
-    --paper: #f3f0e8; --surface: rgba(243, 240, 232, .92);
-    --ink: #1d1c19; --ink-2: #4f4c45; --ink-3: #6c685e;       /* ink-3 在紙上的對比 ≥ 4.5:1 */
-    --hair: #d3cebf; --axis: #aaa597;
-    --shu: #c83a25; --on-shu: #fff;
+    --paper: #f3f0e8;
+    --ink: #1d1c19;
+    --ink-2: #5b5850;
+    --ink-3: #8f8b80;
+    --hair: #dedacd;
+    --axis: #b9b4a6;
+    --shu: #d4402a;
     --serif: "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif TC", "PMingLiU", serif;
-    --sans: system-ui, "Microsoft JhengHei", "PingFang TC", "Noto Sans TC", sans-serif;
-    --safe-b: env(safe-area-inset-bottom, 0px);
+    --sans: system-ui, "Microsoft JhengHei", "PingFang TC", sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
-      --paper: #151412; --surface: rgba(21, 20, 18, .9);
-      --ink: #ece7da; --ink-2: #c3bdad; --ink-3: #9d9889;
-      --hair: #34322c; --axis: #4f4b42; --shu: #ee6a4d; --on-shu: #1b0f0b;
+      --paper: #151412; --ink: #e9e4d7; --ink-2: #b3ae9f; --ink-3: #7f7b6f;
+      --hair: #2a2823; --axis: #4a463e; --shu: #ee6a4d;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --paper: #151412; --surface: rgba(21, 20, 18, .9);
-    --ink: #ece7da; --ink-2: #c3bdad; --ink-3: #9d9889;
-    --hair: #34322c; --axis: #4f4b42; --shu: #ee6a4d; --on-shu: #1b0f0b;
+    --paper: #151412; --ink: #e9e4d7; --ink-2: #b3ae9f; --ink-3: #7f7b6f;
+    --hair: #2a2823; --axis: #4a463e; --shu: #ee6a4d;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
-  body { background: var(--paper); color: var(--ink); overflow: hidden; font: 15px/1.7 var(--sans); -webkit-text-size-adjust: 100%; }
-  button { font: inherit; color: inherit; }
-  [hidden] { display: none !important; }
-
-  /* ---- 3D 舞台與畫面上的標籤 ---- */
+  body {
+    background: var(--paper); color: var(--ink); overflow: hidden;
+    font: 13px/1.8 var(--sans); letter-spacing: 0.02em;
+  }
   #stage { position: fixed; inset: 0; }
   #stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
   #stage canvas:active { cursor: grabbing; }
   #labels { position: fixed; inset: 0; pointer-events: none; overflow: hidden; }
-  .lbl { position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 12px; color: var(--ink-3); font-variant-numeric: tabular-nums; will-change: transform; line-height: 1.3; }
-  .lbl.title { font-family: var(--serif); font-size: 14px; color: var(--ink-2); letter-spacing: .12em; }
-  .lbl.now { color: var(--shu); font-family: var(--serif); letter-spacing: .2em; }
-  .lbl.obj { font-family: var(--serif); font-size: 13px; color: var(--ink); text-align: center; letter-spacing: .08em; }
-  .lbl.obj small { display: block; font-family: var(--sans); font-size: 11px; color: var(--ink-3); letter-spacing: 0; }
-
-  /* ---- 按鈕：看得出來能按；主要的那顆最醒目 ---- */
-  .btn {
-    display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 48px; padding: 0 18px;
-    background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; cursor: pointer; font-size: 15px;
-    transition: transform .08s ease, background-color .15s ease; -webkit-tap-highlight-color: transparent;
+  .lbl {
+    position: absolute; left: 0; top: 0; white-space: nowrap; font-size: 11px; color: var(--ink-3);
+    font-variant-numeric: tabular-nums; will-change: transform; line-height: 1.3;
   }
-  .btn:hover { background: color-mix(in srgb, var(--ink) 7%, var(--paper)); }
-  .btn:active { transform: scale(.97); }
-  .btn:focus-visible, .seg button:focus-visible, .link:focus-visible, summary:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
-  .btn.primary { background: var(--shu); color: var(--on-shu); border-color: transparent; font-weight: 600; }
-  .btn.primary:hover { background: color-mix(in srgb, var(--shu) 88%, var(--ink)); }
-  .btn.big { min-height: 56px; font-size: 17px; width: 100%; }
-  .btn svg, .icon { width: 22px; height: 22px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-  .link { background: none; border: 0; color: var(--ink-2); text-decoration: underline; text-underline-offset: 4px; cursor: pointer; min-height: 44px; padding: 0 10px; font-size: 15px; }
-  .link:hover { color: var(--ink); }
+  .lbl.title { font-family: var(--serif); font-size: 13px; color: var(--ink-2); letter-spacing: 0.25em; }
+  .lbl.title small { font-family: var(--sans); font-size: 9px; letter-spacing: 0.12em; color: var(--ink-3); margin-left: 6px; }
+  .lbl.now { color: var(--shu); font-family: var(--serif); letter-spacing: 0.2em; }
+  .lbl.obj { font-family: var(--serif); font-size: 12px; color: var(--ink); text-align: center; letter-spacing: 0.1em; }
+  .lbl.obj small { display: block; font-family: var(--sans); font-size: 10px; color: var(--ink-3); letter-spacing: 0.04em; }
 
-  /* ---- 上方：標題、說明、兩個畫面的切換 ---- */
-  .top { position: fixed; z-index: 3; left: 0; right: 0; top: 0; padding: max(12px, env(safe-area-inset-top)) 16px 0; display: grid; gap: 10px; justify-items: center; pointer-events: none; }
-  .top > * { pointer-events: auto; }
-  .bar { width: min(560px, 100%); display: flex; align-items: center; justify-content: space-between; }
-  .brand { display: flex; align-items: center; gap: 10px; font: 500 20px/1 var(--serif); letter-spacing: .3em; }
-  .seal { width: 24px; height: 24px; background: var(--shu); color: var(--on-shu); display: grid; place-items: center; font: 500 14px/1 var(--serif); border-radius: 3px; letter-spacing: 0; }
-  .help-btn { width: 48px; padding: 0; border-radius: 50%; }
-  .seg { width: min(360px, 100%); display: grid; grid-template-columns: 1fr 1fr; padding: 4px; gap: 4px; background: var(--surface); border: 1px solid var(--hair); border-radius: 16px; }
-  .seg button { min-height: 44px; border: 0; border-radius: 12px; background: none; cursor: pointer; font-size: 15px; color: var(--ink-2); }
-  .seg button[aria-selected="true"] { background: var(--ink); color: var(--paper); font-weight: 600; }
-  .seg-hint { width: min(560px, 100%); margin: 0; text-align: center; font-size: 13px; line-height: 1.6; color: var(--ink-2); text-shadow: 0 0 8px var(--paper), 0 0 8px var(--paper); }
+  .hud { position: fixed; z-index: 2; }
+  .head { top: 28px; left: 30px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+  .head h1 {
+    margin: 0; font: 500 22px/1 var(--serif); letter-spacing: 0.45em; writing-mode: vertical-rl;
+  }
+  .seal {
+    width: 22px; height: 22px; background: var(--shu); color: var(--paper); display: grid; place-items: center;
+    font: 500 14px/1 var(--serif); border-radius: 2px;
+  }
 
-  /* ---- 下方：現在的狀態，和四顆按鈕 ---- */
-  .chip { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(92px + var(--safe-b)); width: min(560px, calc(100% - 24px));
-    display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; padding: 10px 14px; background: var(--surface); border: 1px solid var(--hair); border-radius: 14px; font-size: 14px; line-height: 1.5; }
-  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--ink-3); }
-  .chip[data-k="ok"] .dot { background: var(--ink); animation: pulse 1.6s ease-in-out infinite; }
-  .chip[data-k="warn"] .dot, .chip[data-k="bad"] .dot { background: var(--shu); }
-  .chip[data-k="bad"] { border-color: var(--shu); }
-  @keyframes pulse { 50% { transform: scale(1.5); opacity: .5; } }
-  .read { font-variant-numeric: tabular-nums; color: var(--ink-2); white-space: nowrap; font-size: 13px; }
-  .meter { grid-column: 1 / -1; height: 6px; border-radius: 3px; background: var(--hair); overflow: hidden; }
-  .meter i { display: block; height: 100%; width: 0; background: var(--ink); border-radius: 3px; transition: width .08s linear; }
-  .dock { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(12px + var(--safe-b)); width: min(560px, calc(100% - 24px)); display: grid; grid-template-columns: 1.7fr 1fr 1fr 1fr; gap: 8px; }
-  .dock .btn { flex-direction: column; gap: 2px; min-height: 64px; padding: 6px 4px; font-size: 13px; }
-  .dock .btn.primary { font-size: 15px; }
-  .coach { position: fixed; z-index: 3; left: 50%; transform: translateX(-50%); bottom: calc(164px + var(--safe-b)); padding: 8px 14px; border-radius: 999px; background: var(--ink); color: var(--paper); font-size: 13px; max-width: calc(100% - 24px); text-align: center; }
+  .foot { left: 30px; bottom: 26px; display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--ink-2); max-width: 46vw; }
+  .status { display: flex; align-items: center; gap: 8px; }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ink); flex: none; }
+  .status.wait .dot { background: var(--ink-3); }
+  .status.bad .dot { background: var(--shu); }
+  .status.bad { color: var(--shu); }
+  .status button { font: inherit; color: var(--ink); background: none; border: 0; border-bottom: 1px solid var(--shu); padding: 0 2px; margin-left: 6px; cursor: pointer; }
+  .hint { font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
+  .now-row { display: flex; gap: 18px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
+  .now-row b { font-weight: 500; color: var(--ink); }
 
-  /* ---- 第一次打開：只有一個選擇 ---- */
-  .welcome { position: fixed; z-index: 4; inset: 0; display: grid; place-items: center; padding: 20px; background: color-mix(in srgb, var(--paper) 55%, transparent); backdrop-filter: blur(2px); }
-  .card { width: min(420px, 100%); padding: 28px 24px 20px; background: var(--paper); border: 1px solid var(--hair); border-radius: 22px; box-shadow: 0 10px 40px rgba(0, 0, 0, .18); text-align: center; display: grid; gap: 14px; }
-  .card h1 { margin: 0; font: 500 28px/1.3 var(--serif); letter-spacing: .35em; text-indent: .35em; }
-  .card .lead { margin: 0; font-size: 17px; line-height: 1.7; }
-  .card .sub { margin: 0; font-size: 13.5px; color: var(--ink-2); line-height: 1.7; text-wrap: balance; }
-  .card .lead { text-wrap: balance; }
-  .card .row { display: flex; justify-content: center; gap: 4px; flex-wrap: wrap; }
-  .steps { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; text-align: left; font-size: 14px; color: var(--ink-2); }
-  .steps .n { display: inline-grid; place-items: center; width: 22px; height: 22px; margin-right: 8px; border-radius: 50%; background: var(--ink); color: var(--paper); font-size: 12px; font-weight: 600; }
+  .theory { top: 28px; right: 30px; width: 300px; max-height: calc(100vh - 90px); overflow: auto; color: var(--ink-2); font-size: 12px; scrollbar-width: none;
+    -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); padding-bottom: 22px; }
+  .theory::-webkit-scrollbar { display: none; }
+  .theory summary { cursor: pointer; list-style: none; font: 500 14px/1 var(--serif); letter-spacing: 0.3em; color: var(--ink); padding-bottom: 12px; border-bottom: 1px solid var(--hair); }
+  .theory summary::-webkit-details-marker { display: none; }
+  .theory summary::after { content: "－"; float: right; color: var(--ink-3); font-family: var(--sans); letter-spacing: 0; }
+  .theory details:not([open]) summary::after { content: "＋"; }
+  .theory details:not([open]) summary { border-bottom-color: transparent; }
+  .row { padding: 7px 0; border-bottom: 1px solid var(--hair); }
+  .row .k { display: flex; gap: 10px; align-items: baseline; color: var(--ink); font-family: var(--serif); font-size: 13px; letter-spacing: 0.12em; }
+  .row .k i { font-style: normal; font-family: var(--sans); font-size: 10px; letter-spacing: 0.08em; color: var(--ink-3); min-width: 38px; }
+  .row p { margin: 1px 0 0 48px; line-height: 1.6; font-size: 11.5px; }
+  .row cite { display: block; margin: 1px 0 0 48px; font-style: normal; font-size: 10.5px; color: var(--ink-3); }
+  .legend { padding: 12px 0 2px; display: grid; gap: 8px; }
+  .legend .bar { height: 6px; background: linear-gradient(to right, color-mix(in srgb, var(--ink) 90%, transparent), color-mix(in srgb, var(--ink) 14%, transparent)); border-radius: 3px; }
+  .legend .scale { display: flex; justify-content: space-between; font-size: 10.5px; color: var(--ink-3); margin-top: 3px; }
+  .legend .size { display: flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--ink-3); }
+  .legend .size i { display: inline-block; border-radius: 50%; background: color-mix(in srgb, var(--ink) 60%, transparent); }
+  .set { display: grid; grid-template-columns: auto 1fr auto; gap: 8px; align-items: center; font-size: 11.5px; padding-top: 10px; }
+  .set output { font-variant-numeric: tabular-nums; color: var(--ink); min-width: 38px; text-align: right; }
+  input[type=range] { width: 100%; accent-color: var(--ink); height: 14px; }
+  .note { margin: 12px 0 0; font-size: 10.5px; line-height: 1.7; color: var(--ink-3); }
 
-  /* ---- 說明、設定：從下面滑出來的面板 ---- */
-  dialog { border: 0; padding: 0; width: min(560px, 100%); max-height: 88vh; margin: auto auto 0; background: var(--paper); color: var(--ink); border-radius: 22px 22px 0 0; box-shadow: 0 -8px 40px rgba(0, 0, 0, .25); }
-  dialog::backdrop { background: rgba(0, 0, 0, .45); }
-  @media (min-width: 760px) { dialog { margin: auto; border-radius: 22px; } }
-  .sheet-h { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px 10px 22px; background: var(--paper); border-bottom: 1px solid var(--hair); }
-  .sheet-h h2 { margin: 0; font: 500 20px/1.2 var(--serif); letter-spacing: .25em; }
-  .sheet-b { padding: 8px 22px 28px; display: grid; gap: 4px; }
-  .sheet-b h3 { margin: 18px 0 4px; font: 600 16px/1.4 var(--sans); }
-  .sheet-b p { margin: 2px 0; color: var(--ink-2); }
-  .key { display: grid; grid-template-columns: 30px 1fr; gap: 10px; align-items: start; padding: 6px 0; }
-  .key .sw { width: 30px; height: 30px; display: grid; place-items: center; }
-  .key .sw i { display: block; border-radius: 50%; background: var(--ink); }
-  .field { display: grid; gap: 4px; padding: 14px 0; border-bottom: 1px solid var(--hair); }
-  .field label, .field .lab { font-weight: 600; }
-  .field .desc { font-size: 13px; color: var(--ink-2); margin: 0; }
-  .field .scale { display: flex; justify-content: space-between; font-size: 12px; color: var(--ink-3); }
-  .field output { color: var(--ink-2); font-weight: 400; margin-left: 8px; }
-  input[type=range] { width: 100%; height: 36px; accent-color: var(--ink); }
-  .switch { display: flex; align-items: center; justify-content: space-between; min-height: 52px; border-bottom: 1px solid var(--hair); cursor: pointer; }
-  .switch input { width: 26px; height: 26px; accent-color: var(--ink); }
-  details.theory { margin-top: 14px; border: 1px solid var(--hair); border-radius: 14px; padding: 0 14px; }
-  details.theory summary { cursor: pointer; min-height: 48px; display: flex; align-items: center; font-weight: 600; list-style: none; }
-  details.theory summary::-webkit-details-marker { display: none; }
-  details.theory summary::after { content: "＋"; margin-left: auto; color: var(--ink-3); }
-  details.theory[open] summary::after { content: "－"; }
-  .th { padding: 8px 0; border-top: 1px solid var(--hair); font-size: 13.5px; }
-  .th b { font-family: var(--serif); letter-spacing: .08em; }
-  .th cite { display: block; font-style: normal; font-size: 12px; color: var(--ink-3); }
-  .fine { font-size: 12.5px; color: var(--ink-3); }
+  .bar-btns { left: 50%; transform: translateX(-50%); bottom: 24px; display: flex; gap: 4px; }
+  .bar-btns button {
+    font: inherit; font-size: 12px; letter-spacing: 0.2em; background: none; color: var(--ink-3); border: 0;
+    border-bottom: 1px solid transparent; padding: 4px 12px; cursor: pointer;
+  }
+  .bar-btns button:hover { color: var(--ink); }
+  .bar-btns button[aria-pressed="true"] { color: var(--ink); border-bottom-color: var(--shu); }
+  button:focus-visible, summary:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
-  #tip { position: fixed; z-index: 5; pointer-events: none; display: none; white-space: nowrap; background: var(--paper); border: 1px solid var(--axis); border-radius: 10px; padding: 8px 12px; font-size: 13px; line-height: 1.7; color: var(--ink); }
-  #tip .t { font: 500 14px/1.4 var(--serif); letter-spacing: .1em; margin-bottom: 2px; }
+  #tip {
+    position: fixed; z-index: 4; pointer-events: none; display: none; white-space: nowrap;
+    background: var(--paper); border: 1px solid var(--axis); padding: 8px 12px; font-size: 12px; line-height: 1.7;
+    font-variant-numeric: tabular-nums; color: var(--ink);
+  }
+  #tip .t { font: 500 13px/1.4 var(--serif); letter-spacing: 0.15em; margin-bottom: 2px; }
   #tip .m { color: var(--ink-3); margin-right: 6px; }
-  #fatal { position: fixed; inset: 0; z-index: 9; display: grid; place-items: center; text-align: center; padding: 24px; background: var(--paper); }
+  #fatal { position: fixed; inset: 0; z-index: 5; display: grid; place-items: center; text-align: center; padding: 24px; background: var(--paper); }
+  #fatal[hidden] { display: none; }
 
-  /* 第一次打開時，其餘都收起來，只留一張卡片 */
-  body[data-state="welcome"] .seg, body[data-state="welcome"] .seg-hint, body[data-state="welcome"] .chip, body[data-state="welcome"] .dock,
-  body[data-state="error"] .chip, body[data-state="error"] .dock { display: none; }
-  body:not([data-state="welcome"]) .welcome[data-kind="start"] { display: none; }
-  @media (max-height: 560px) { .seg-hint { display: none; } .card { padding: 18px; gap: 8px; } }
+  @media (max-width: 760px) {
+    .head { top: 14px; left: 16px; flex-direction: row; align-items: center; }
+    .head h1 { writing-mode: horizontal-tb; font-size: 18px; letter-spacing: 0.3em; }
+    .theory { top: 52px; right: 16px; left: 16px; width: auto; max-height: 52vh; background: var(--paper); padding: 0 0 4px; }
+    .foot { left: 16px; bottom: 92px; max-width: calc(100vw - 32px); }
+    .bar-btns { bottom: 12px; width: calc(100% - 20px); justify-content: center; flex-wrap: wrap; }
+  }
   @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
 </style>
 <script type="importmap">
@@ -158,104 +134,61 @@
 } }
 </script>
 </head>
-<body data-state="welcome">
-<div id="stage" aria-label="聲音的 3D 形狀"></div>
-<div id="labels" aria-hidden="true"></div>
-<div id="tip" aria-hidden="true"></div>
+<body>
+<div id="stage"></div>
+<div id="labels"></div>
+<div id="tip"></div>
 
-<!-- 上方 -->
-<header class="top">
-  <div class="bar">
-    <div class="brand"><span class="seal" aria-hidden="true">聲</span>聲音的形狀</div>
-    <button class="btn help-btn" id="bHelp" aria-label="怎麼看這張圖" title="怎麼看這張圖"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.4-1 .9-1 1.7M12 17h.01"/></svg></button>
-  </div>
-  <div class="seg" role="tablist" aria-label="切換畫面">
-    <button role="tab" id="tPlot" aria-selected="true">圖表</button>
-    <button role="tab" id="tFire" aria-selected="false">發射</button>
-  </div>
-  <p class="seg-hint" id="segHint"></p>
+<header class="hud head">
+  <h1>聲音的形狀</h1>
+  <div class="seal" aria-hidden="true">聲</div>
 </header>
 
-<!-- 下方 -->
-<div class="coach" id="coach" hidden>拖曳旋轉　·　雙指縮放　·　連點兩下回到中心</div>
-<div class="chip" id="chip" data-k="wait" role="status" aria-live="polite">
-  <i class="dot" aria-hidden="true"></i><span id="chipText">準備中…</span><span class="read" id="read"></span>
-  <div class="meter" aria-hidden="true"><i id="meter"></i></div>
+<aside class="hud theory" aria-label="理論對照">
+  <details open id="theory">
+    <summary>理論對照</summary>
+    <div class="row" id="xRow"><div class="k"><i>X</i>時間</div>
+      <p>聲音是會展開的形態：起音、持續、結束。</p><cite>Smalley 1997 · spectromorphology</cite></div>
+    <div class="row" id="yRow"><div class="k"><i>Y</i>音高</div>
+      <p>頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。</p><cite>Smalley 1997 · Wessel 1979</cite></div>
+    <div class="row" id="zRow"><div class="k"><i>Z</i>亮度</div>
+      <p>頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。</p><cite>Grey 1977 · timbre space</cite></div>
+    <div class="row"><div class="k"><i>墨色</i>音調 ↔ 噪音</div>
+      <p>墨濃是有明確音高（note），墨淡是噪音（noise），之間是含糊的音高（node）。噪音沉在底部的無音高帶。</p><cite>Smalley 1997 · spectral typology</cite></div>
+    <div class="row" id="lRow"><div class="k"><i>連線</i>聲音物件</div>
+      <p>一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。</p><cite>Schaeffer 1966 · objet sonore</cite></div>
+    <div class="row"><div class="k"><i>短暫</i>只留幾秒</div>
+      <p>點會自己消失，編碼聲音的東西和聲音一樣短暫。</p><cite>SensaBubble, CHI 2014 · ephemeral</cite></div>
+
+    <div class="legend">
+      <div><div class="bar"></div><div class="scale"><span>note 音調</span><span>node</span><span>noise 噪音</span></div></div>
+      <div class="size"><i style="width:5px;height:5px"></i><i style="width:10px;height:10px"></i><i style="width:16px;height:16px"></i>點的大小 = 響度</div>
+    </div>
+    <label class="set">保留<input type="range" id="rRet" min="1" max="60" step="1" value="3"><output id="oRet">3 秒</output></label>
+    <label class="set">最小響度<input type="range" id="rMin" min="2" max="25" step="1" value="6"><output id="oMin">6 dB</output></label>
+    <p class="note">這是依文獻做的設計對照，軸的選擇是詮釋，不等於這些文獻自己用的軸。</p>
+    <p class="note">打開網頁時，瀏覽器會問你要不要允許使用麥克風。聲音只在你的瀏覽器裡分析，不會錄音，也不會傳到任何地方。</p>
+  </details>
+</aside>
+
+<footer class="hud foot">
+  <div class="status wait" id="status" role="status" aria-live="polite"><i class="dot"></i><span id="statusText">準備中…</span></div>
+  <div class="hint">左鍵（手機：單指）旋轉 · 滾輪（雙指）縮放 · 右鍵（雙指拖）移動 · 連點兩下或按 . 回到中心</div>
+  <div class="now-row"><span>音高 <b id="nPitch">–</b></span><span>亮度 <b id="nCen">–</b></span><span>響度 <b id="nRel">–</b></span><span>點 <b id="nCount">0</b></span></div>
+</footer>
+
+<div class="hud bar-btns">
+  <button id="bView" title="換成另一種看法：圖表，或聲音從一個點發射出去">畫面：圖表</button>
+  <button id="bHome" title="把視角、縮放都回到預設的中心（也可以連點兩下，或按 . 鍵）">回中心</button>
+  <button id="bPause" aria-pressed="false" title="讓畫面停住，慢慢看">暫停</button>
+  <button id="bClear" title="把畫面上的點全部清掉">清除</button>
+  <button id="bRot" aria-pressed="false" title="讓畫面自己慢慢轉">旋轉</button>
+  <button id="bLine" aria-pressed="true" title="顯示或隱藏點之間的連線">連線</button>
+  <button id="bLbl" aria-pressed="true" title="顯示或隱藏聲音的名稱標籤">標籤</button>
 </div>
-<nav class="dock" aria-label="主要操作">
-  <button class="btn primary" id="bMain"><svg viewBox="0 0 24 24" aria-hidden="true" id="mainIcon"></svg><span id="mainText">開始</span></button>
-  <button class="btn" id="bPause" aria-pressed="false"><svg viewBox="0 0 24 24" aria-hidden="true" id="pauseIcon"><path d="M8 5v14M16 5v14"/></svg><span id="pauseText">暫停畫面</span></button>
-  <button class="btn" id="bClear"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>清除</button>
-  <button class="btn" id="bSet"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/></svg>設定</button>
-</nav>
-
-<!-- 第一次打開的卡片；麥克風被拒絕時，同一張卡片改成教學 -->
-<section class="welcome" id="welcome" data-kind="start" aria-labelledby="wTitle">
-  <div class="card" id="card">
-    <h1 id="wTitle">聲音的形狀</h1>
-    <p class="lead">對著麥克風說話、唱歌或拍手，<br>看見聲音的 3D 形狀。</p>
-    <button class="btn primary big" id="bStart"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>開始（使用麥克風）</button>
-    <p class="sub">瀏覽器會問你要不要允許麥克風，請按「允許」。<br>聲音只在你的裝置上即時分析，不會錄音，也不會上傳。</p>
-    <div class="row"><button class="link" id="bHelp2">怎麼看？</button></div>
-  </div>
-</section>
-
-<!-- 怎麼看 -->
-<dialog id="dHelp" aria-labelledby="hTitle">
-  <div class="sheet-h"><h2 id="hTitle">怎麼看</h2><button class="btn help-btn" data-close aria-label="關閉">✕</button></div>
-  <div class="sheet-b">
-    <h3>你會看到什麼</h3>
-    <p>每一個點是一小段聲音。你出聲的時候，點會一顆一顆出現，大約 3 秒後慢慢消失。</p>
-    <div class="key"><span class="sw"><i style="width:8px;height:8px"></i></span><span><b>點的大小</b>　越大聲，點越大。</span></div>
-    <div class="key"><span class="sw"><i style="width:18px;height:18px;opacity:.9"></i></span><span><b>點的濃淡</b>　濃 = 有清楚的音高（像唱歌、母音）；淡 = 雜音（像「嘶」、拍手、風聲）。</span></div>
-    <div class="key"><span class="sw">—</span><span><b>點之間的線</b>　連在一起的線，是同一個連續的聲音。</span></div>
-    <h3>兩個畫面</h3>
-    <p><b>圖表：</b>橫向是時間（右邊是現在），上下是音高（越高的聲音越上面），前後是音色（悶的在後面、尖亮的在前面）。</p>
-    <p><b>發射：</b>想像聲音從中間一個發射點射出去：音高決定往上或往下，音色決定往左或往右，越大聲飛得越遠。</p>
-    <h3>怎麼操作</h3>
-    <p>手機：單指拖 = 旋轉，雙指捏 = 縮放，雙指拖 = 移動，連點兩下 = 回到中心。<br>電腦：左鍵拖 = 旋轉，滾輪 = 縮放，右鍵拖 = 移動，連點兩下或按 <b>.</b> = 回到中心，空白鍵 = 開始／停止。</p>
-    <h3>聲音會被收走嗎？</h3>
-    <p>不會。聲音只在你的手機或電腦裡即時分析，不錄音、不儲存、不上傳。關掉網頁就全部消失。</p>
-    <details class="theory">
-      <summary>背後的理論（給想知道的人）</summary>
-      <div class="th"><b>時間</b>　聲音是會展開的形態：起音、持續、結束。<cite>Smalley 1997 · Spectromorphology</cite></div>
-      <div class="th"><b>音高</b>　頻譜空間的上下，由低到高；音高與音色是各自獨立的維度。<cite>Smalley 1997 · Wessel 1979</cite></div>
-      <div class="th"><b>音色亮度</b>　頻譜重心，也就是能量落在高處還是低處，是音色空間的第一個軸。<cite>Grey 1977 · timbre space</cite></div>
-      <div class="th"><b>濃淡</b>　有明確音高（note）、含糊的音高（node）、噪音（noise）的連續變化。<cite>Smalley 1997 · spectral typology</cite></div>
-      <div class="th"><b>連線</b>　一段連續的聲音，離開它的來源，被當成有形狀的物體來聽。<cite>Schaeffer 1966 · objet sonore</cite></div>
-      <div class="th"><b>只留幾秒</b>　點會自己消失，用來呈現聲音的東西和聲音一樣短暫。<cite>Seah et al., SensaBubble, CHI 2014</cite></div>
-      <div class="th"><b>發射畫面的上下</b>　高音往上、低音往下，是人很普遍的聽覺連結。<cite>Pratt 1930 · Rusconi et al. 2006</cite></div>
-      <div class="th"><b>遠近 = 響度</b>　聲音越大聲，越像在近處或用力發出。<cite>Chowning 1971</cite></div>
-      <p class="fine">這是依文獻做的設計對照；各軸怎麼對應是詮釋，不等於這些文獻自己使用的軸。</p>
-    </details>
-    <p class="fine"><a href="https://github.com/marskuan/sound-shape" style="color:inherit">原始碼</a></p>
-  </div>
-</dialog>
-
-<!-- 設定 -->
-<dialog id="dSet" aria-labelledby="sTitle">
-  <div class="sheet-h"><h2 id="sTitle">設定</h2><button class="btn help-btn" data-close aria-label="關閉">✕</button></div>
-  <div class="sheet-b">
-    <div class="field">
-      <label for="rSens">靈敏度<output id="oSens">普通</output></label>
-      <input type="range" id="rSens" min="0" max="4" step="1" value="2">
-      <div class="scale"><span>低</span><span>高</span></div>
-      <p class="desc">越高，越小聲的聲音也會畫出來。環境很吵、畫面一直有雜點的話，調低。</p>
-    </div>
-    <div class="field">
-      <label for="rRet">點停留的時間<output id="oRet">3 秒</output></label>
-      <input type="range" id="rRet" min="1" max="20" step="1" value="3">
-      <div class="scale"><span>短</span><span>長</span></div>
-    </div>
-    <label class="switch"><span>自動旋轉</span><input type="checkbox" id="cRot"></label>
-    <label class="switch"><span>顯示點之間的線</span><input type="checkbox" id="cLine" checked></label>
-    <label class="switch"><span>顯示聲音的名稱標籤</span><input type="checkbox" id="cLbl" checked></label>
-    <div class="field" style="border:0"><button class="btn" id="bHome">回到預設視角</button></div>
-  </div>
-</dialog>
 
 <div id="fatal" hidden>
-  <div><h2 style="font-family:var(--serif);letter-spacing:.2em">無法載入 3D</h2><p>這頁要從網路載入 3D 元件。請確認有連網，然後重新整理。</p></div>
+  <div><h2 style="font-family:var(--serif);letter-spacing:.2em">無法載入 3D</h2><p>這頁要從網路載入 Three.js。請確認有連網，然後重新整理。</p></div>
 </div>
 
 <script type="module">
@@ -272,8 +205,8 @@ try {
   throw err;
 }
 
-// ---------- 座標與刻度 ----------
-// 圖表：X 時間（新的在右）、Y 音高、Z 音色亮度（頻譜重心）。大小 = 響度，濃淡 = 音調↔雜音。
+// ---------- 三個軸與它們的刻度 ----------
+// X 時間（新的在右）、Y 音高、Z 亮度（頻譜重心）。大小 = 響度，墨色 = 音調↔噪音。
 const cfg = { retention: 3, minRel: 6, labelRel: 12 };
 const PITCH = { lo: 80, hi: 5000, minConf: 0.45, noteConf: 0.75, top: 1, bottom: -0.74, stripY: -0.95 };
 const BRIGHT = { lo: 200, hi: 6000 };
@@ -282,17 +215,22 @@ const logN = (v, lo, hi) => clamp(Math.log(Math.max(v, lo) / lo) / Math.log(hi /
 const pitchY = f => PITCH.bottom + (PITCH.top - PITCH.bottom) * logN(f, PITCH.lo, PITCH.hi);
 const brightZ = c => logN(c, BRIGHT.lo, BRIGHT.hi) * 2 - 1;
 const PITCH_TICKS = [[110, 'A2'], [220, 'A3'], [440, 'A4'], [880, 'A5'], [1760, 'A6'], [3520, 'A7']];
+const BRIGHT_TICKS = [250, 500, 1000, 2000, 4000];
+let view = 'plot';                               // 'plot' 圖表（時間、音高…）／'fire' 發射（聲音從一個點射出去）
+
+// ---- 「發射」畫面：聲音從一個固定的點射出去 ----
+// 水平角 = 音色（悶的往左、亮的往右）、仰角 = 音高、飛多遠 = 響度。
+const GUN = { x: 0, y: -0.45, z: 1.25 };
+const EL = { lo: -15, hi: 35 };
+const FLY = { vMin: 0.5, vMax: 2.3, drag: 1.2 };
+const AZ_SPREAD = 45;
+const FIRE_DIR_TICKS = [[-45, '左 45°'], [-30, '30°'], [-15, '15°'], [0, '正前方'], [15, '15°'], [30, '30°'], [45, '右 45°']];
+const rad = d => d * Math.PI / 180;
+const fAim = (a, pos, neg) => Math.abs(a) < 3 ? '正前方' : (a < 0 ? neg : pos) + ' ' + Math.round(Math.abs(a)) + '°';
 const fHz = v => v >= 1000 ? (v / 1000).toFixed(v % 1000 === 0 ? 0 : 1) + ' kHz' : Math.round(v) + ' Hz';
 const NOTES = ['C', 'C♯', 'D', 'D♯', 'E', 'F', 'F♯', 'G', 'G♯', 'A', 'A♯', 'B'];
 const noteName = f => { const m = Math.round(69 + 12 * Math.log2(f / 440)); return NOTES[((m % 12) + 12) % 12] + (Math.floor(m / 12) - 1); };
-const kindOf = c => c >= PITCH.noteConf ? '有清楚的音高' : c >= PITCH.minConf ? '音高有點模糊' : '雜音';
-const rad = d => d * Math.PI / 180;
-
-// 發射：聲音從一個固定的點射出。左右 = 音色（悶 ↔ 亮）、上下 = 音高（比你平常高就往上）、距離 = 響度。
-const EMIT = { x: 0, y: -0.45, z: 1.25 };
-const EL = { lo: -18, hi: 50 };                    // 往下／往上最多幾度
-const FLY = { vMin: 0.5, vMax: 2.3, drag: 1.2 };   // 泡泡出口速度（響度決定）和空氣阻力
-const AZ_RANGE = 45;                               // 左右最多幾度
+const kindOf = c => c >= PITCH.noteConf ? ['note', '音調'] : c >= PITCH.minConf ? ['node', '含糊音高'] : ['noise', '噪音'];
 
 // ---------- 場景 ----------
 const stage = $('stage');
@@ -339,7 +277,7 @@ function applyTheme() {
   inkMeshMat.color.set(T.ink);
 }
 
-// ---- 座標軸 ----
+// ---- 座標軸：三條細線、地板與背牆的格線、無音高帶 ----
 const axisGroup = new THREE.Group();
 scene.add(axisGroup);
 const labelEls = [];
@@ -360,34 +298,37 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const seg = (a, b, mat) => new THREE.Line(new THREE.BufferGeometry().setFromPoints([a, b]), mat);
 function timeTicks() {
   const r = cfg.retention;
-  const step = r <= 6 ? 1 : r <= 12 ? 2 : 5;
+  const step = r <= 6 ? 1 : r <= 12 ? 2 : r <= 30 ? 5 : 10;
   const t = [];
   for (let s = 0; s <= r + 1e-6; s += step) t.push(s);
   return t;
 }
 const timeX = age => (1 - clamp(age / cfg.retention, 0, 1)) * 2 - 1;
-let view = 'plot';
-
+// 「發射」畫面的座標：地板上以發射點為中心的扇形（水平角的放射線 + 距離弧），旁邊垂直的弧是仰角（音高）
 function buildFireAxes() {
-  const gx = EMIT.x, gy = -1, gz = EMIT.z;
+  const gx = GUN.x, gy = -1, gz = GUN.z;
   const arc = (r, a0, a1, step, f, mat) => {
     let prev = f(a0, r);
     for (let a = a0 + step; a <= a1 + 1e-6; a += step) { const q = f(a, r); axisGroup.add(seg(prev, q, mat)); prev = q; }
   };
   const floorAt = (a, r) => V(gx + r * Math.sin(rad(a)), gy, gz - r * Math.cos(rad(a)));
-  for (const a of [-45, -30, -15, 0, 15, 30, 45]) axisGroup.add(seg(floorAt(a, 0.1), floorAt(a, 2.15), a === 0 ? axisMat : hairMat));
-  addLabel('左（音色悶）', floorAt(-45, 2.3));
-  addLabel('右（音色亮）', floorAt(45, 2.3));
+  for (const [a, name] of FIRE_DIR_TICKS) {
+    axisGroup.add(seg(floorAt(a, 0.1), floorAt(a, 2.15), a === 0 ? axisMat : hairMat));
+    addLabel(name, floorAt(a, 2.3));
+  }
   for (const r of [0.5, 1.0, 1.5, 2.0]) arc(r, -46, 46, 4, floorAt, hairMat);
-  addLabel('小聲', floorAt(0, 0.5).add(V(0.15, 0, 0)));
-  addLabel('大聲', floorAt(0, 2.0).add(V(0.15, 0, 0)));
-  const tiltAt = (e, r) => V(gx, EMIT.y + r * Math.sin(rad(e)), gz - r * Math.cos(rad(e)));
+  addLabel('小聲', floorAt(0, 0.5).add(V(0.13, 0, 0)), 'tick');
+  addLabel('大聲', floorAt(0, 2.0).add(V(0.13, 0, 0)), 'tick');
+  const tiltAt = (e, r) => V(gx, GUN.y + r * Math.sin(rad(e)), gz - r * Math.cos(rad(e)));
   arc(1.0, EL.lo, EL.hi, 3, tiltAt, axisMat);
-  addLabel('高音', tiltAt(EL.hi + 3, 1.12));
-  addLabel('低音', tiltAt(EL.lo - 4, 1.1));
-  addLabel('發射點', V(gx, gy - 0.02, gz + 0.45), 'title');
-  addLabel('上下 = 音高', tiltAt(EL.hi + 22, 1.0), 'title');
-  addLabel('遠近 = 響度', floorAt(0, 2.55), 'title');
+  for (const [f, name] of PITCH_TICKS) {
+    const e = lerp(EL.lo, EL.hi, logN(f, PITCH.lo, PITCH.hi));
+    axisGroup.add(seg(tiltAt(e, 0.96), tiltAt(e, 1.06), axisMat));
+    addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, tiltAt(e, 1.13), 'tick');
+  }
+  addLabel('仰角 TILT<small>音高</small>', tiltAt(EL.hi + 8, 1.0), 'title');
+  addLabel('水平角 PAN<small>音色</small>', V(gx, gy - 0.02, gz + 0.5), 'title');
+  addLabel('距離<small>響度</small>', floorAt(34, 2.0).add(V(0.15, 0, 0)), 'title');
 }
 function buildAxes() {
   axisGroup.traverse(o => o.geometry && o.geometry.dispose());
@@ -397,23 +338,26 @@ function buildAxes() {
   for (const a of timeTicks()) {
     const x = timeX(a);
     axisGroup.add(seg(V(x, -1, -1), V(x, 1, -1), hairMat), seg(V(x, -1, -1), V(x, -1, 1), hairMat));
-    addLabel(a === 0 ? '現在' : '−' + a + ' 秒', V(x, -1.05, 1.08));
+    addLabel(a === 0 ? '現在' : '−' + a + ' s', V(x, -1.05, 1.08));
   }
   for (const [f, name] of PITCH_TICKS) {
     const y = pitchY(f);
     axisGroup.add(seg(V(-1, y, -1), V(1, y, -1), hairMat));
-    addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, V(-1.05, y, 1.06));
+    addLabel(`${name}<small style="margin-left:5px">${fHz(f).replace(' ', '')}</small>`, V(-1.05, y, 1.06), 'tick');
+  }
+  for (const c of BRIGHT_TICKS) {
+    const z = brightZ(c);
+    axisGroup.add(seg(V(-1, -1, z), V(1, -1, z), hairMat));
+    addLabel(fHz(c).replace(' ', ''), V(1.07, -1.05, z));
   }
   axisGroup.add(seg(V(-1, -1, 1), V(1, -1, 1), axisMat), seg(V(-1, -1, 1), V(-1, 1, 1), axisMat), seg(V(1, -1, 1), V(1, -1, -1), axisMat));
   axisGroup.add(seg(V(-1, STRIP_TOP, -1), V(1, STRIP_TOP, -1), stripMat));
   axisGroup.add(seg(V(1, -1, -1), V(1, 1, -1), nowMat));
   addLabel('現在', V(1, 1.08, -1), 'now');
-  addLabel('雜音（沒有音高）', V(-1.05, (STRIP_TOP - 1) / 2 + 0.04, -1));
-  addLabel('音高 ↑ 高', V(-1.2, 1.14, 1.0), 'title');
-  addLabel('時間 →', V(0, -1.2, 1.12), 'title');
-  addLabel('悶', V(1.12, -1.05, -1));
-  addLabel('尖亮', V(1.12, -1.05, 1));
-  addLabel('音色', V(1.55, -1.08, 0), 'title');
+  addLabel('無音高<small>noise</small>', V(-1.05, (STRIP_TOP - 1) / 2 + 0.04, -1), 'tick');
+  addLabel('時間<small>TIME</small>', V(0, -1.2, 1.12), 'title');
+  addLabel('音高<small>PITCH</small>', V(-1.2, 1.14, 1.0), 'title');
+  addLabel('亮度<small>BRIGHTNESS</small>', V(1.9, -1.08, -0.1), 'title');
 }
 
 // ---- 點：一顆一顆的墨點，投影在地板和背牆上的淡影 ----
@@ -431,7 +375,7 @@ const pointVert = `
   void main() {
     vec4 mv = modelViewMatrix * vec4(position, 1.0);
     gl_Position = projectionMatrix * mv;
-    gl_PointSize = max(aSize * uSizeMul * uScale / -mv.z, 2.0);
+    gl_PointSize = max(aSize * uSizeMul * uScale / -mv.z, 1.5);
     vAlpha = aAlpha;
   }`;
 const pointFrag = `
@@ -441,7 +385,7 @@ const pointFrag = `
     float r = length(p);
     if (r > 1.0) discard;
     float edge = 1.0 - smoothstep(0.86, 1.0, r);
-    float wet = 0.8 + 0.2 * smoothstep(0.5, 0.92, r);
+    float wet = 0.8 + 0.2 * smoothstep(0.5, 0.92, r);      // 墨乾了邊緣比較深
     gl_FragColor = vec4(uInk, vAlpha * uAlphaMul * edge * wet);
   }`;
 const scaleU = { value: 800 };
@@ -461,15 +405,17 @@ makePoints(posFloor, 0.55, 0.28);
 const wallPts = makePoints(posWall, 0.55, 0.28);
 makePoints(posMain, 1, 1);
 
-// 發射點：一根朱色的短管，跟著最新的聲音轉
+// 發射點：一根朱色的短管跟著最新的聲音轉，底座是墨色的球；地板弧和仰角弧上各有一個瞄準點
 const emitter = new THREE.Group();
 const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.026, 0.3, 18), shuMat);
 const base = new THREE.Mesh(new THREE.SphereGeometry(0.045, 20, 14), inkMeshMat);
-base.position.set(EMIT.x, EMIT.y, EMIT.z);
-emitter.add(barrel, base);
+const panDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), shuMat);
+const tiltDot = new THREE.Mesh(new THREE.SphereGeometry(0.035, 14, 10), shuMat);
+base.position.set(GUN.x, GUN.y, GUN.z);
+emitter.add(barrel, base, panDot, tiltDot);
 emitter.visible = false;
 scene.add(emitter);
-const aim = { az: 0, el: 8 };
+const aim = { az: 0, el: lerp(EL.lo, EL.hi, 0.3) };
 const _d = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
 function aimDir(az, el, out) {
   const ce = Math.cos(rad(el));
@@ -497,7 +443,7 @@ ring.visible = hoverRing.visible = false;
 ring.renderOrder = hoverRing.renderOrder = 10;
 scene.add(ring, hoverRing);
 
-// ---------- 時間（暫停畫面時時間也停；滑鼠指著某顆點時也先停，才讀得到數字） ----------
+// ---------- 狀態與時間（暫停時時間也停；滑鼠指著某顆點時也先停，才讀得到數字） ----------
 let paused = false, frozen = false, holdAt = 0, shift = 0;
 const held = () => paused || frozen;
 const clock = () => (held() ? holdAt : performance.now() / 1000 - shift);
@@ -508,33 +454,28 @@ function setHold(nextPaused, nextFrozen) {
   if (held() && !wasHeld) holdAt = cur;
   else if (!held() && wasHeld) shift = raw - holdAt;
 }
-
-// ---------- 收進來的聲音資料 → 點 ----------
 const S = { rel: null, pitch: 0, conf: 0, cen: null, seen: -9 };
 let showLines = true, showLabels = true, rotOn = false;
-let lastHeard = 0, refPitch = null;      // refPitch：你平常說話的音高（對數），發射畫面的上下用它對照
-const segs = [];
+let lastHeard = 0, silentSince = null, status = 'wait';
+const segs = [];       // 每一段連續的聲音 = 一個聲音物件
 
-function onAudio(m, now = performance.now() / 1000) {
+// ---------- 麥克風收進來的聲音資料 → 點 ----------
+function onAudio(m) {
+  const now = performance.now() / 1000;
   const rel = m.noise == null ? null : m.db - m.noise;
   Object.assign(S, { rel, pitch: m.pitch_hz || 0, conf: m.pitch_conf ?? 0, cen: m.centroid, seen: now });
   if (rel != null && rel >= cfg.minRel) lastHeard = now;
   if (held() || rel == null || rel < cfg.minRel) return;
   const t = clock();
-  if (t - lastT > 0.3) segId++;
+  if (t - lastT > 0.3) segId++;           // 安靜超過 0.3 秒 → 下一個聲音物件，連線在這裡斷開
   lastT = t;
-  if (t - lastAdd < 0.04) return;
+  if (t - lastAdd < 0.04) return;         // 取樣太密的話點會糊成一條，每 40 毫秒留一顆
   lastAdd = t;
   const slot = head;
   head = (head + 1) % CAP;
   const conf = clamp(m.pitch_conf ?? 0, 0, 1);
-  const pitched = (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf;
-  if (pitched) {                              // 慢慢記住你平常的音高（約 5 秒跟上）
-    const lp = Math.log(m.pitch_hz);
-    refPitch = refPitch === null ? lp : refPitch + 0.03 * (lp - refPitch);
-  }
-  const p = { slot, t, seg: segId, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0, pitched,
-              rel0: refPitch, x: 0, y: 0, z: 0, d: 0, fade: 1, lp: pitched ? Math.log(m.pitch_hz) : null };
+  const p = { slot, t, seg: segId, rel, rms: m.rms ?? 0, cen: m.centroid, conf, pitch: m.pitch_hz || 0,
+              pitched: (m.pitch_hz || 0) > 0 && conf >= PITCH.minConf, x: 0, y: 0, z: 0, d: 0, fade: 1 };
   pts[slot] = p;
   let s = segs[segs.length - 1];
   if (!s || s.id !== segId) { s = { id: segId, t0: t, t1: t, n: 0, sumConf: 0, ref: p, max: -1, l: null }; segs.push(s); }
@@ -544,7 +485,10 @@ function onAudio(m, now = performance.now() / 1000) {
     s.l = addLabel('', V(0, 0, 0), 'obj', 'obj');
     while (segs.filter(x => x.l).length > 30) removeObjLabel(segs.find(x => x.l));
   }
-  if (s.l) s.l.el.innerHTML = `${s.sumConf / s.n >= PITCH.noteConf ? '音' : s.sumConf / s.n >= PITCH.minConf ? '含糊的音' : '雜音'}<small>${(s.t1 - s.t0).toFixed(1)} 秒</small>`;
+  if (s.l) {
+    const [en, zh] = kindOf(s.sumConf / s.n);
+    s.l.el.innerHTML = `${zh}<small>${en} · ${(s.t1 - s.t0).toFixed(2)} s</small>`;
+  }
 }
 function removeObjLabel(s) {
   if (!s.l) return;
@@ -560,6 +504,25 @@ function clearAll() {
   lineGeo.setDrawRange(0, 0);
 }
 
+// ---------- 畫面上的數字、狀態 ----------
+function setStatus(cls, text, retry = false) {
+  $('status').className = 'status ' + cls;
+  $('statusText').textContent = text;
+  if (retry) {
+    const b = document.createElement('button');
+    b.textContent = '再試一次';
+    b.onclick = () => startMic();
+    $('statusText').append(' ', b);
+  }
+}
+function updateNow(now, alive) {
+  const fresh = now - S.seen < 1.5 && S.rel != null && S.rel >= cfg.minRel;
+  $('nPitch').textContent = fresh ? (S.pitch > 0 && S.conf >= PITCH.minConf ? Math.round(S.pitch) + ' Hz · ' + noteName(S.pitch) : '無明確音高') : '–';
+  $('nCen').textContent = fresh ? fHz(S.cen) : '–';
+  $('nRel').textContent = S.rel != null && now - S.seen < 1.5 ? (S.rel >= 0 ? '+' : '') + S.rel.toFixed(0) + ' dB' : '–';
+  $('nCount').textContent = alive;
+}
+
 // ---------- 主迴圈 ----------
 const _v = new THREE.Vector3();
 let pointer = null, userDrag = false, rotTimer = 0, scalePx = 800, lastRaf = performance.now(), hudAcc = 0;
@@ -573,7 +536,7 @@ function animate(tms) {
   controls.autoRotate = rotOn && !pointer && !userDrag;
   controls.update();
 
-  let nSeg = 0, prev = null, latest = null, best = null, bestD = 1e9;
+  let alive = 0, nSeg = 0, prev = null, latest = null, best = null, bestD = 1e9;
   inkRGB.set(T['ink-3']);
   const A = aAlpha.array, Z = aSize.array, M = posMain.array, F = posFloor.array, W = posWall.array;
   for (let k = 0; k < CAP; k++) {
@@ -583,32 +546,33 @@ function animate(tms) {
     const age = now - p.t;
     if (age > ret) { pts[slot] = null; A[slot] = 0; prev = null; continue; }
     if (view === 'fire') {
-      p.az = lerp(-AZ_RANGE, AZ_RANGE, logN(p.cen, 300, 4000));                 // 音色悶 → 左、亮 → 右
-      const oct = p.lp !== null && p.rel0 !== null ? (p.lp - p.rel0) / Math.LN2 : 0;   // 比你平常高幾個八度
-      p.el = p.lp === null ? EL.lo : lerp(EL.lo, EL.hi, 0.35 + 0.33 * clamp(oct / 0.5, -1, 1));   // 平常的音高在中間偏下，高半個八度就到頂
+      // 從發射點射出：音色 = 水平角、音高 = 仰角、響度 = 出口速度；空氣阻力讓它慢慢停下
+      p.az = lerp(-AZ_SPREAD, AZ_SPREAD, logN(p.cen, 300, 4000));
+      p.el = lerp(EL.lo, EL.hi, p.pitched ? logN(p.pitch, PITCH.lo, PITCH.hi) : 0.06 * p.conf);   // 沒有音高的貼近最低
       const r = (lerp(FLY.vMin, FLY.vMax, clamp(p.rel / 36, 0, 1)) / FLY.drag) * (1 - Math.exp(-FLY.drag * age));
       aimDir(p.az, p.el, _d);
-      p.x = EMIT.x + _d.x * r; p.y = EMIT.y + _d.y * r; p.z = EMIT.z + _d.z * r;
+      p.x = GUN.x + _d.x * r; p.y = GUN.y + _d.y * r; p.z = GUN.z + _d.z * r;
     } else {
       p.x = timeX(age); p.z = brightZ(p.cen);
-      p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;
+      p.y = p.pitched ? pitchY(p.pitch) : PITCH.stripY + 0.12 * p.conf;     // 沒有音高的沉在底部，越接近有音高越靠上
     }
     const fade = clamp((ret - age) / (ret * 0.25), 0, 1);
     const pop = age < 0.2 ? 0.5 + 0.5 * (1 - Math.pow(1 - age / 0.2, 3)) : 1;
     p.fade = fade;
-    p.d = (0.026 + 0.09 * Math.pow(clamp(p.rel / 40, 0, 1), 1.2)) * fade * pop;
+    p.d = (0.02 + 0.085 * Math.pow(clamp(p.rel / 40, 0, 1), 1.2)) * fade * pop;
     Z[slot] = p.d;
-    A[slot] = lerp(0.16, 0.7, p.conf) * fade;
+    A[slot] = lerp(0.12, 0.62, p.conf) * fade;
     M[slot * 3] = p.x; M[slot * 3 + 1] = p.y; M[slot * 3 + 2] = p.z;
     F[slot * 3] = p.x; F[slot * 3 + 1] = -1; F[slot * 3 + 2] = p.z;
     W[slot * 3] = p.x; W[slot * 3 + 1] = p.y; W[slot * 3 + 2] = -1;
+    alive++;
     if (showLines && view === 'fire') {
-      const a = 0.22 * fade, i = nSeg * 2;
-      linePos.set([EMIT.x, EMIT.y, EMIT.z, p.x, p.y, p.z], i * 3);
+      const a = 0.2 * fade, i = nSeg * 2;
+      linePos.set([GUN.x, GUN.y, GUN.z, p.x, p.y, p.z], i * 3);
       lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
       nSeg++;
     } else if (showLines && prev && prev.seg === p.seg) {
-      const a = 0.5 * Math.min(fade, prev.fade), i = nSeg * 2;
+      const a = 0.45 * Math.min(fade, prev.fade), i = nSeg * 2;
       linePos.set([prev.x, prev.y, prev.z, p.x, p.y, p.z], i * 3);
       lineCol.set([inkRGB.r, inkRGB.g, inkRGB.b, a, inkRGB.r, inkRGB.g, inkRGB.b, a], i * 4);
       nSeg++;
@@ -635,10 +599,12 @@ function animate(tms) {
     const live = latest && now - latest.t < 0.6;
     const k = 1 - Math.exp(-dt * 10);
     aim.az += ((live ? latest.az : 0) - aim.az) * k;
-    aim.el += ((live ? latest.el : 8) - aim.el) * k;
+    aim.el += ((live ? latest.el : lerp(EL.lo, EL.hi, 0.3)) - aim.el) * k;
     aimDir(aim.az, aim.el, _d);
-    barrel.position.set(EMIT.x + _d.x * 0.17, EMIT.y + _d.y * 0.17, EMIT.z + _d.z * 0.17);
+    barrel.position.set(GUN.x + _d.x * 0.17, GUN.y + _d.y * 0.17, GUN.z + _d.z * 0.17);
     barrel.quaternion.setFromUnitVectors(_up, _d);
+    panDot.position.set(GUN.x + Math.sin(rad(aim.az)), -1, GUN.z - Math.cos(rad(aim.az)));
+    tiltDot.position.set(GUN.x, GUN.y + Math.sin(rad(aim.el)), GUN.z - Math.cos(rad(aim.el)));
   }
 
   if (latest && !held() && now - latest.t < 1.2) {      // 最新的一顆套一圈朱
@@ -648,30 +614,33 @@ function animate(tms) {
     ringMat.opacity = 0.9 * (1 - (now - latest.t) / 1.2);
   } else ring.visible = false;
 
-  if (!!best !== frozen) setHold(paused, !!best);        // 滑鼠指著點時，時間先停住
+  if (!!best !== frozen) setHold(paused, !!best);        // 指到的那顆：時間先停住，才讀得到數字
   const tip = $('tip');
   if (best && pointer) {
     hoverRing.visible = true;
     hoverRing.position.set(best.x, best.y, best.z);
     hoverRing.scale.setScalar(best.d + 0.04);
     hoverMat.opacity = 0.8;
+    const [en, zh] = kindOf(best.conf);
     tip.style.display = 'block';
-    tip.innerHTML = `<div class="t">${kindOf(best.conf)}</div>` +
-      `<span class="m">音高</span>${best.pitched ? noteName(best.pitch) + ' · ' + Math.round(best.pitch) + ' Hz' : '沒有明確的音高'}<br>` +
-      `<span class="m">音色</span>${best.cen < 800 ? '偏悶' : best.cen < 2200 ? '適中' : '偏尖亮'}（${fHz(best.cen)}）<br>` +
-      `<span class="m">大小聲</span>比背景大 ${best.rel.toFixed(0)} dB<br><span class="m">${(now - best.t).toFixed(1)} 秒前</span>`;
+    tip.innerHTML = `<div class="t">${zh} <span class="m">${en}</span></div>` +
+      `<span class="m">音高</span>${best.pitched ? Math.round(best.pitch) + ' Hz · ' + noteName(best.pitch) : '無明確音高'}<br>` +
+      `<span class="m">亮度</span>${fHz(best.cen)}<br>` +
+      (view === 'fire' ? `<span class="m">發射</span>${fAim(best.az, '右', '左')} · ${fAim(best.el, '上', '下').replace('正前方', '水平')}<br>` : '') +
+      `<span class="m">響度</span>+${best.rel.toFixed(1)} dB（${best.rms.toFixed(3)}）<br>` +
+      `<span class="m">音調度</span>${best.conf.toFixed(2)}<br><span class="m">${(now - best.t).toFixed(1)} 秒前</span>`;
     tip.style.left = Math.min(pointer.cx + 16, innerWidth - tip.offsetWidth - 8) + 'px';
     tip.style.top = (pointer.cy + 16) + 'px';
   } else { tip.style.display = 'none'; hoverRing.visible = false; }
 
-  for (let i = segs.length - 1; i >= 0; i--) {        // 聲音名稱：標在最大聲的那顆
+  for (let i = segs.length - 1; i >= 0; i--) {          // 聲音物件的標籤：標在最大聲的那顆
     const s = segs[i];
     if (pts[s.ref.slot] !== s.ref) { removeObjLabel(s); segs.splice(i, 1); continue; }
     if (s.l) { s.l.pos.set(s.ref.x, s.ref.y + s.ref.d * 0.5 + 0.05, s.ref.z); s.l.hidden = !showLabels || s.ref.fade < 0.35; }
   }
 
   hudAcc += dt;
-  if (hudAcc > 0.1) { hudAcc = 0; updateReadout(performance.now() / 1000); }
+  if (hudAcc > 0.1) { hudAcc = 0; updateNow(performance.now() / 1000, alive); }
   for (const l of labelEls) {
     _v.copy(l.pos).project(camera);
     if (l.hidden || _v.z > 1) { l.el.style.display = 'none'; continue; }
@@ -686,7 +655,7 @@ function resize() {
   const w = stage.clientWidth, h = stage.clientHeight;
   renderer.setSize(w, h, false);
   camera.aspect = w / h;
-  camera.fov = camera.aspect < 0.8 ? 55 : 36;
+  camera.fov = camera.aspect < 0.8 ? 55 : 36;      // 直向的手機用廣角，方塊才不會縮成一小塊
   camera.updateProjectionMatrix();
   scalePx = renderer.getDrawingBufferSize(new THREE.Vector2()).y / (2 * Math.tan(camera.fov * Math.PI / 360));
   scaleU.value = scalePx;
@@ -698,8 +667,8 @@ function homeCamera() {
   else { camera.position.set(2.3 * k, 1.0 * k, 5.2 * k); controls.target.set(0, -0.2, 0); }
 }
 
-// ---------- 畫面操作：旋轉、縮放、移動；連點兩下回到中心 ----------
-controls.addEventListener('start', () => { userDrag = true; clearTimeout(rotTimer); hideCoach(); });
+// ---------- 操作 ----------
+controls.addEventListener('start', () => { userDrag = true; clearTimeout(rotTimer); });
 controls.addEventListener('end', () => { rotTimer = setTimeout(() => { userDrag = false; }, 3000); });
 const cv = renderer.domElement;
 cv.addEventListener('pointermove', e => {
@@ -707,20 +676,64 @@ cv.addEventListener('pointermove', e => {
   pointer = { x: e.clientX - r.left, y: e.clientY - r.top, cx: e.clientX, cy: e.clientY, mouse: e.pointerType === 'mouse' };
 });
 cv.addEventListener('pointerleave', () => { pointer = null; });
-let tap = { t: 0, x: 0, y: 0, moved: false };
+let tap = { t: 0, x: 0, y: 0, moved: false };       // 手機沒有 . 鍵：連點兩下回到中心
 cv.addEventListener('pointerdown', e => { tap.x = e.clientX; tap.y = e.clientY; tap.moved = false; });
 cv.addEventListener('pointermove', e => { if (Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 8) tap.moved = true; });
-cv.addEventListener('pointerup', e => {
+cv.addEventListener('pointerup', () => {
   if (tap.moved) return;
   const now = performance.now();
-  if (now - tap.t < 350) { homeCamera(); controls.update(); tap.t = 0; } else tap.t = now;     // 手機也能連點兩下
+  if (now - tap.t < 350) { homeCamera(); controls.update(); tap.t = 0; } else tap.t = now;
 });
-addEventListener('keydown', e => {
-  if (e.key === '.' || e.code === 'NumpadDecimal') { homeCamera(); controls.update(); }
-  else if (e.code === 'Space' && e.target === document.body && !document.querySelector('dialog[open]')) { e.preventDefault(); onMain(); }
+addEventListener('keydown', e => { if (e.key === '.' || e.code === 'NumpadDecimal') { homeCamera(); controls.update(); } });
+function toggle(id, get, set) {
+  $(id).addEventListener('click', () => { const v = !get(); set(v); $(id).setAttribute('aria-pressed', String(v)); });
+}
+toggle('bRot', () => rotOn, v => { rotOn = v; });
+toggle('bLine', () => showLines, v => { showLines = v; });
+toggle('bLbl', () => showLabels, v => { showLabels = v; });
+toggle('bPause', () => paused, v => {
+  setHold(v, frozen);
+  $('bPause').textContent = v ? '繼續' : '暫停';
 });
+$('bClear').addEventListener('click', clearAll);
+$('bHome').addEventListener('click', () => { homeCamera(); controls.update(); });
+$('rRet').addEventListener('input', e => { cfg.retention = +e.target.value; $('oRet').textContent = cfg.retention + ' 秒'; buildAxes(); });
+$('rMin').addEventListener('input', e => { cfg.minRel = +e.target.value; $('oMin').textContent = cfg.minRel + ' dB'; });
+if (matchMedia('(max-width: 760px)').matches) $('theory').open = false;
 
-// ---------- 收音：這台裝置的麥克風。全部在瀏覽器裡分析，不錄音、不上傳 ----------
+// ---------- 兩種看法：圖表、發射（右邊「理論對照」跟著換） ----------
+const ROWS = {
+  plot: [
+    ['X', '時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'],
+    ['Y', '音高', '頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。', 'Smalley 1997 · Wessel 1979'],
+    ['Z', '亮度', '頻譜重心，也就是頻譜能量落在高處還是低處。音色空間的第一個軸。', 'Grey 1977 · timbre space'],
+    ['連線', '聲音物件', '一段連續的聲音，離開它的來源，被當成一個有形狀的物體來聽。', 'Schaeffer 1966 · objet sonore'],
+  ],
+  fire: [
+    ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
+    ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
+    ['Z', '距離', '響度決定飛多遠：越大聲飛越遠，再被空氣阻力慢慢停下。', 'Chowning 1971 · 響度與距離'],
+    ['連線', '射線', '發射點到每顆泡泡的細線。一串連續的泡泡就是一個聲音物件。', 'Schaeffer 1966 · objet sonore'],
+  ],
+};
+function renderRows() {
+  const [x, y, z, l] = ROWS[view];
+  for (const [id, [letter, k, desc, cite]] of [['xRow', x], ['yRow', y], ['zRow', z], ['lRow', l]])
+    $(id).innerHTML = `<div class="k"><i>${letter}</i>${k}</div><p>${desc}</p><cite>${cite}</cite>`;
+}
+function setView(v) {
+  view = v;
+  $('bView').textContent = v === 'fire' ? '畫面：發射' : '畫面：圖表';
+  wallPts.visible = v === 'plot';
+  emitter.visible = v === 'fire';
+  renderRows();
+  buildAxes();
+  homeCamera();
+  try { history.replaceState(null, '', v === 'fire' ? '#fire' : location.pathname + location.search); } catch (e) { /* 沒關係 */ }
+}
+$('bView').addEventListener('click', () => setView(view === 'fire' ? 'plot' : 'fire'));
+
+// ---------- 收音：這台裝置的麥克風。打開網頁就自動問，全部在瀏覽器裡分析，不錄音、不上傳 ----------
 const mic = { ctx: null, stream: null, an: null, timer: 0, time: null, warm: [], floor: null };
 const work = new Float32Array(1024);
 const FFT_N = 1024;
@@ -765,10 +778,11 @@ function pitchOf(x, fs, fmax) {             // x 要先去掉直流；回傳 [�
   const shiftK = Math.abs(d) > 1e-12 ? clamp(0.5 * (a - c) / d, -1, 1) : 0;
   return [fs / (km + shiftK), clamp(peak, 0, 1)];
 }
+const LIVE = '即時（聲音只在你的瀏覽器裡分析，不會上傳）';
 function noiseUpdate(db) {                  // 背景噪音：一開始量 20 次取中位數，之後慢慢跟著環境走
   if (mic.floor === null) {
     mic.warm.push(db);
-    if (mic.warm.length >= 20) { const s = [...mic.warm].sort((p, q) => p - q); mic.floor = s[s.length >> 1]; if (state === 'calibrating') setState('listening'); }
+    if (mic.warm.length >= 20) { const s = [...mic.warm].sort((p, q) => p - q); mic.floor = s[s.length >> 1]; status = 'live'; setStatus('live', LIVE); }
   } else if (db < mic.floor + 3) mic.floor = 0.95 * mic.floor + 0.05 * db;
   else mic.floor += 0.002;
   return mic.floor;
@@ -789,174 +803,69 @@ function analyseBlock(x, fs) {
   const [f0, conf] = pitchOf(work, fs, Math.min(4000, fs / 6));
   return { db, rms, centroid: Math.round(sm > 0 ? sw / sm : 0), pitch_hz: +f0.toFixed(1), pitch_conf: +conf.toFixed(2) };
 }
-let silentSince = null;
 function emit(x, fs) {
   const a = analyseBlock(x, fs);
   const now = performance.now() / 1000;
-  if (a.db < -85) { silentSince ??= now; if (state === 'listening' && now - silentSince > 3) setState('silent'); }
-  else { silentSince = null; if (state === 'silent') setState('listening'); }
+  if (a.db < -85) {                          // 完全的數位靜音：麥克風被靜音，或輸入音量是 0
+    silentSince ??= now;
+    if (status === 'live' && now - silentSince > 3) { status = 'silent'; setStatus('bad', '麥克風收到的是完全的靜音（被靜音了？輸入音量是 0？）'); }
+  } else {
+    silentSince = null;
+    if (status === 'silent') { status = 'live'; setStatus('live', LIVE); }
+  }
   onAudio({ db: a.db, noise: noiseUpdate(a.db), centroid: a.centroid, pitch_hz: a.pitch_hz, pitch_conf: a.pitch_conf, rms: +a.rms.toFixed(4) });
+  if (status === 'live' && now - lastHeard > 10) { status = 'quiet'; setStatus('live', '聽不太到聲音。靠近麥克風、大聲一點，或把右邊的「最小響度」調小。'); }
+  else if (status === 'quiet' && now - lastHeard < 1) { status = 'live'; setStatus('live', LIVE); }
 }
 function micTick() {
   if (!mic.an) return;
+  if (mic.ctx.state !== 'running') {         // iPhone：要等你點一下畫面才開始收音
+    if (status !== 'tap') { status = 'tap'; setStatus('wait', '輕點一下畫面，開始收音'); }
+    mic.ctx.resume().catch(() => {});
+    return;
+  }
+  if (status === 'tap') { status = mic.floor === null ? 'wait' : 'live'; setStatus(status === 'live' ? 'live' : 'wait', status === 'live' ? LIVE : '校正背景噪音，請安靜一下…'); }
   mic.an.getFloatTimeDomainData(mic.time);
   emit(mic.time.subarray(mic.time.length - FFT_N), mic.ctx.sampleRate);
 }
-async function stopMic() {
-  clearInterval(mic.timer);
-  if (mic.stream) mic.stream.getTracks().forEach(t => t.stop());
-  if (mic.ctx) { try { await mic.ctx.close(); } catch (e) { /* 已經關了 */ } }
-  mic.ctx = mic.stream = mic.an = null;
-}
+addEventListener('pointerdown', () => { if (mic.ctx && mic.ctx.state === 'suspended') mic.ctx.resume().catch(() => {}); });
 async function startMic() {
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { setState('unsupported'); return; }
-  setState('asking');
-  const Ctx = window.AudioContext || window.webkitAudioContext;
-  const ctx = new Ctx();                       // 要在按下按鈕的當下建立，iPhone 才肯出聲音
+  if (mic.timer) return;
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    status = 'bad'; setStatus('bad', '這個瀏覽器不能用麥克風。請改用 Chrome 或 Safari 直接打開這個網址（LINE、Instagram 內建的瀏覽器不行）。');
+    return;
+  }
+  status = 'wait'; setStatus('wait', '請在跳出的視窗按「允許」，讓網頁使用麥克風…');
   try {
     mic.stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false } });
   } catch (err) {
-    try { await ctx.close(); } catch (e) { /* 沒關係 */ }
-    setState(err && (err.name === 'NotAllowedError' || err.name === 'SecurityError') ? 'denied' : 'nomic');
+    status = 'bad';
+    if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError'))
+      setStatus('bad', '沒有麥克風權限。請按網址列左邊的鎖頭，把麥克風改成「允許」。', true);
+    else setStatus('bad', '找不到可以用的麥克風，或被別的程式占用了。', true);
     return;
   }
-  await ctx.resume();
-  mic.ctx = ctx;
-  mic.an = ctx.createAnalyser();
+  const Ctx = window.AudioContext || window.webkitAudioContext;
+  mic.ctx = new Ctx();
+  mic.ctx.resume().catch(() => {});
+  mic.an = mic.ctx.createAnalyser();
   mic.an.fftSize = 2048;
   mic.an.smoothingTimeConstant = 0;
-  ctx.createMediaStreamSource(mic.stream).connect(mic.an);      // 不接到喇叭，才不會回授
+  mic.ctx.createMediaStreamSource(mic.stream).connect(mic.an);   // 不接到喇叭，才不會回授
   mic.time = new Float32Array(mic.an.fftSize);
   mic.warm = []; mic.floor = null; silentSince = null; lastHeard = performance.now() / 1000;
-  setState('calibrating');
+  status = 'wait'; setStatus('wait', '校正背景噪音，請安靜一下…');
   mic.timer = setInterval(micTick, 30);
 }
 
-// ---------- 介面：一個狀態機，決定畫面上顯示什麼 ----------
-let state = 'welcome';
-const listening = () => ['calibrating', 'listening', 'quiet', 'silent'].includes(state);
-const CHIP = {
-  asking:      ['wait', '請在跳出的視窗按「允許」，讓網頁使用麥克風。'],
-  calibrating: ['wait', '正在適應環境的噪音，請先安靜一秒…'],
-  listening:   ['ok', '正在聽。說話、唱歌或拍手試試看。'],
-  quiet:       ['warn', '聽不太到你。靠近麥克風、大聲一點，或到設定把靈敏度調高。'],
-  silent:      ['bad', '麥克風完全沒有聲音。是不是被靜音了？'],
-  stopped:     ['wait', '已停止。按「再開始」繼續。'],
-};
-const ICON = {
-  mic: '<path d="M12 3a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V6a3 3 0 0 0-3-3z"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/>',
-  stop: '<rect x="6" y="6" width="12" height="12" rx="2"/>',
-  pause: '<path d="M8 5v14M16 5v14"/>',
-  play: '<path d="M8 5l11 7-11 7z"/>',
-};
-function showCard(kind) {                   // 麥克風有問題時，用同一張卡片講清楚怎麼辦
-  const card = $('card'), w = $('welcome');
-  const msg = {
-    denied: ['沒有取得麥克風', '你剛才按了「封鎖」，或這個網頁的麥克風被關掉了。', ['點網址列左邊的 <b>鎖頭</b> 或 <b>設定</b> 圖示', '把「麥克風」改成 <b>允許</b>', '回到這裡，按「再試一次」']],
-    nomic: ['找不到麥克風', '這個裝置好像沒有可以用的麥克風，或被別的程式占用了。', ['確認麥克風有接好、沒有被別的程式使用', '回到這裡，按「再試一次」']],
-    unsupported: ['這個瀏覽器用不了麥克風', '有些 App 內建的瀏覽器（例如 LINE、Instagram、Facebook）不開放麥克風。', ['按右上角「⋯」，選「用瀏覽器開啟」', '或按下面的「複製網址」，貼到 Chrome 或 Safari']],
-  }[kind];
-  card.innerHTML = `<h1 style="font-size:22px;letter-spacing:.15em;text-indent:0">${msg[0]}</h1><p class="lead" style="font-size:15px">${msg[1]}</p>` +
-    `<ol class="steps">${msg[2].map((s, i) => `<li><span class="n">${i + 1}</span>${s}</li>`).join('')}</ol>` +
-    (kind === 'unsupported' ? '' : '<button class="btn primary big" id="bRetry">再試一次</button>') +
-    '<div class="row"><button class="link" id="bCopy">複製網址</button></div>';
-  w.dataset.kind = 'error'; w.hidden = false;
-  const r = $('bRetry'); if (r) r.onclick = () => { w.hidden = true; startMic(); };
-  $('bCopy').onclick = async () => { try { await navigator.clipboard.writeText(location.href); $('bCopy').textContent = '已複製，請貼到 Chrome 或 Safari'; } catch (e) { $('bCopy').textContent = '請長按網址列複製'; } };
-}
-function setState(s) {
-  state = s;
-  if (['denied', 'nomic', 'unsupported'].includes(s)) { document.body.dataset.state = 'error'; showCard(s); updateDock(); return; }
-  if (s !== 'welcome') { $('welcome').hidden = !(s === 'welcome'); }
-  document.body.dataset.state = s;
-  if (CHIP[s]) { $('chip').dataset.k = CHIP[s][0]; $('chipText').textContent = CHIP[s][1]; }
-  if (s === 'listening' || s === 'calibrating') showCoachOnce();
-  updateDock();
-}
-function updateDock() {
-  const on = listening() || state === 'asking';
-  $('mainText').textContent = on ? '停止' : state === 'stopped' ? '再開始' : '開始';
-  $('mainIcon').innerHTML = on ? ICON.stop : ICON.mic;
-  $('bMain').setAttribute('aria-label', on ? '停止使用麥克風' : '開始使用麥克風');
-}
-async function onMain() {
-  if (listening() || state === 'asking') {
-    await stopMic();
-    setState('stopped');
-  } else {
-    $('welcome').hidden = true;
-    await startMic();
-  }
-}
-function updateReadout(now) {
-  const fresh = now - S.seen < 1.5 && S.rel != null && S.rel >= cfg.minRel;
-  $('read').textContent = !listening() ? '' : fresh ? (S.pitch > 0 && S.conf >= PITCH.minConf ? noteName(S.pitch) + ' · ' + Math.round(S.pitch) + ' Hz' : '雜音') : '—';
-  $('meter').style.width = (S.rel != null && now - S.seen < 1.5 && listening() ? clamp(S.rel / 40, 0, 1) * 100 : 0) + '%';
-  $('meter').parentElement.style.visibility = listening() ? 'visible' : 'hidden';
-  if (state === 'listening' && now - lastHeard > 8) setState('quiet');
-  else if (state === 'quiet' && now - lastHeard < 1) setState('listening');
-}
-let coachTimer = 0;
-function showCoachOnce() {
-  try { if (localStorage.getItem('coachSeen')) return; localStorage.setItem('coachSeen', '1'); } catch (e) { /* 沒關係，每次都提示 */ }
-  $('coach').hidden = false;
-  clearTimeout(coachTimer);
-  coachTimer = setTimeout(hideCoach, 7000);
-}
-function hideCoach() { $('coach').hidden = true; }
-
-// ---------- 兩個畫面 ----------
-const HINT = {
-  plot: '橫向是時間（右邊是現在）、上下是音高、前後是音色（悶 ↔ 尖亮）。',
-  fire: '聲音從中間的發射點射出去：上下 = 音高，左右 = 音色，越遠 = 越大聲。',
-};
-function setView(v) {
-  view = v;
-  $('tPlot').setAttribute('aria-selected', String(v === 'plot'));
-  $('tFire').setAttribute('aria-selected', String(v === 'fire'));
-  $('segHint').textContent = HINT[v];
-  wallPts.visible = v === 'plot';
-  emitter.visible = v === 'fire';
-  buildAxes();
-  homeCamera();
-  try { history.replaceState(null, '', v === 'fire' ? '#fire' : location.pathname + location.search); } catch (e) { /* 沒關係 */ }
-}
-$('tPlot').onclick = () => setView('plot');
-$('tFire').onclick = () => setView('fire');
-
-// ---------- 按鈕 ----------
-$('bStart').onclick = () => onMain();
-$('bMain').onclick = () => onMain();
-$('bPause').onclick = () => {
-  setHold(!paused, frozen);
-  $('bPause').setAttribute('aria-pressed', String(paused));
-  $('pauseText').textContent = paused ? '繼續畫面' : '暫停畫面';
-  $('pauseIcon').innerHTML = paused ? ICON.play : ICON.pause;
-};
-$('bClear').onclick = clearAll;
-const open = id => { const d = $(id); if (!d.open) d.showModal(); };
-$('bHelp').onclick = () => open('dHelp');
-$('bHelp2').onclick = () => open('dHelp');
-$('bSet').onclick = () => open('dSet');
-for (const d of document.querySelectorAll('dialog')) {
-  d.addEventListener('click', e => { if (e.target === d || e.target.closest('[data-close]')) d.close(); });   // 點旁邊或 ✕ 都能關
-}
-const SENS = [16, 10, 6, 4, 2], SENS_NAME = ['很低', '低', '普通', '高', '很高'];
-$('rSens').oninput = e => { cfg.minRel = SENS[+e.target.value]; $('oSens').textContent = SENS_NAME[+e.target.value]; };
-$('rRet').oninput = e => { cfg.retention = +e.target.value; $('oRet').textContent = cfg.retention + ' 秒'; buildAxes(); };
-$('cRot').onchange = e => { rotOn = e.target.checked; };
-$('cLine').onchange = e => { showLines = e.target.checked; };
-$('cLbl').onchange = e => { showLabels = e.target.checked; };
-$('bHome').onclick = () => { homeCamera(); controls.update(); $('dSet').close(); };
-
-// ---------- 開始 ----------
+// ---------- 開始：一打開就自動問麥克風 ----------
 applyTheme();
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 resize();
 setView(location.hash === '#fire' ? 'fire' : 'plot');
-updateDock();
-window.__viz = { onMessage: onAudio, setState, getState: () => state, setView, getView: () => view, cfg, pts, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic };
+window.__viz = { onMessage: onAudio, setView, getView: () => view, cfg, pts, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic };
 requestAnimationFrame(animate);
+startMic();
 </script>
 </body>
 </html>
