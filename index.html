@@ -602,9 +602,9 @@ const cloudVert = `
     float f = clamp(t, 0.0, 1.0) * 5.0; int i = int(min(floor(f), 4.0));
     return mix(uPal[i], uPal[i + 1], f - float(i));
   }
-  vec3 hsl(float h, float s, float l) {
-    vec3 k = mod(vec3(0.0, 8.0, 4.0) + h * 12.0, 12.0);
-    return vec3(l) - s * min(l, 1.0 - l) * max(vec3(-1.0), min(min(k - 3.0, 9.0 - k), vec3(1.0)));
+  vec3 cyc(float t) {                                                         // 頭尾相接的色階：繞一圈回到起點
+    float f = fract(t) * 6.0; int i = int(min(floor(f), 5.0)); int j = i == 5 ? 0 : i + 1;
+    return mix(uPal[i], uPal[j], f - float(i));
   }
   void main() {
     float halo = position.z;
@@ -623,9 +623,12 @@ const cloudVert = `
     // 顏色 = 位置的函數（每個模型自己的規則，見 MODELS[*].cloud）
     float t = uLin.w + dot(wp, uLin.xyz) + uRad * length(wp - uOrigin);
     t += 0.045 * sin(wp.x * 7.0 + wp.y * 3.0) * sin(wp.z * 6.0 - wp.y * 5.0);   // 很細的顆粒變化，仍然只看位置
-    vec3 col = uWheel.x > 0.0
-      ? hsl(fract(atan(wp.x + 1e-5, -wp.z) / 6.2831853), uWheel.x, mix(uWheel.y, uWheel.z, clamp(wp.y * 0.5 + 0.5, 0.0, 1.0)))
-      : ramp(t);
+    vec3 col;
+    if (uWheel.x > 0.0) {                                                     // 繞中軸的角度 = 色階上的位置；高度 = 明暗
+      col = cyc(atan(wp.x + 1e-5, -wp.z) / 6.2831853);
+      float k = clamp(wp.y * 0.5 + 0.5, 0.0, 1.0);
+      col = mix(col * uWheel.y, mix(col, vec3(1.0), uWheel.z), k);
+    } else col = ramp(t);
     vCol = mix(uInk, col, uMix);
 
     if (uMode > 1.5) wp.z = -1.0; else if (uMode > 0.5) wp.y = -1.0;           // 淡影：壓到背牆／地板上
@@ -664,14 +667,18 @@ const cloudFloor = makeCloud(1, 0.45, 0.3, 0.3);
 const cloudWall = makeCloud(2, 0.45, 0.3, 0.3);
 const cloudMain = makeCloud(0, 1, 1, 1);
 
-// 配色：每個模型有自己的色階（亮色／深色背景各一組，不是自動反相，是分別挑過的）
+// 配色：參考 Wes Anderson 的電影（每個模型一部）。亮色／深色背景各一組：亮色版把太淡的色稍微壓深，深色版稍微提亮，
+// 讓小點在紙上讀得出來；不是自動反相，是分別挑過的。六個色標之間線性內插。
 const PAL = {
-  land:  { light: ['#5b2f86', '#3c4cab', '#1f80a0', '#2e9b6a', '#6f9a1c', '#c98a0c'], dark: ['#8a63cf', '#6483ee', '#46b0cf', '#52cb92', '#b4dc55', '#f4cd5c'] },   // 山水：紫 → 藍 → 青 → 綠 → 金
-  ember: { light: ['#d4402a', '#df7a26', '#c79a1c', '#4f9a78', '#3a6fa8', '#5b3f8c'], dark: ['#ee6a4d', '#f0954a', '#e0bc4c', '#6cc3a0', '#6a9bdc', '#9578d0'] },  // 餘燼：朱 → 橙 → 金 → 青磁 → 藍 → 紫
+  // The Grand Budapest Hotel：酒紅 → 灰藍 → 粉 → 珊瑚 → 橙 → 蜜金（低音在暮色裡，高音是糖霜）
+  budapest: { light: ['#5b1a18', '#5f82c4', '#d98ab3', '#f0545a', '#c8621f', '#e3a04f'], dark: ['#a8504a', '#8fa9e6', '#f0b4d2', '#ff7b7d', '#e8884a', '#f8ce92'] },
+  // The Life Aquatic with Steve Zissou：紅帽朱紅 → 琥珀 → 黃 → 淺海藍 → 深海藍（近的暖，遠的冷）
+  zissou:   { light: ['#e02b10', '#d99a00', '#d4b21a', '#5fa8ba', '#3b8fa8', '#2b6e86'], dark: ['#ff4a2a', '#f2b820', '#f4da55', '#8cc8d6', '#55b0c8', '#3b8ba6'] },
+  // The Darjeeling Limited：紅 → 橘 → 芥黃 → 青綠 → 天藍 → 薰衣草，頭尾相接，繞一圈（十二個音名）
+  darjeeling: { light: ['#e5342a', '#f08a1c', '#efb21a', '#12a08c', '#58b6d0', '#9a86b0'], dark: ['#ff5a4a', '#ff9e3a', '#ffc93c', '#2fc4ae', '#7cccd8', '#b7a3cc'] },
 };
-const WHEEL = { light: [0.46, 0.36, 0.56], dark: [0.42, 0.54, 0.74] };          // 色相環：[彩度, 最低的亮度, 最高的亮度]
+const CYC = { light: [1, 0.8, 0.18], dark: [1, 0.88, 0.2] };         // 繞圈的色階：[開關, 最低一層乘上的亮度, 最高一層混入的白]
 const hex3 = h => { const n = parseInt(h.replace('#', ''), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
-const hslCss = (h, s, l) => `hsl(${(h * 360).toFixed(0)}deg ${(s * 100).toFixed(0)}% ${(l * 100).toFixed(0)}%)`;
 const isDark = () => new THREE.Color(T.paper).r < 0.3;
 function applyCloud() {                         // 換模型、換深淺色時：把這個模型的配色、大小規則送給著色器，也畫圖例的色條
   cu.uInk.value.set(...hex3(T['ink-3']));
@@ -683,18 +690,10 @@ function applyCloud() {                         // 換模型、換深淺色時�
   cu.uOrigin.value.set(...(c.origin || [0, 0, 0]));
   cu.uGrow.value = c.grow;
   cu.uDot.value = c.dot;
-  let bar;
-  if (c.wheel) {
-    cu.uWheel.value.set(...WHEEL[dk]);
-    const [s, l0, l1] = WHEEL[dk];
-    bar = 'linear-gradient(to right,' + Array.from({ length: 13 }, (_, i) => hslCss(i / 12, s, (l0 + l1) / 2)).join(',') + ')';
-  } else {
-    cu.uWheel.value.set(0, 0, 0);
-    const pal = PAL[c.pal][dk];
-    pal.forEach((h, i) => cu.uPal.value[i].set(...hex3(h)));
-    bar = 'linear-gradient(to right,' + pal.join(',') + ')';
-  }
-  $('barCol').style.background = bar;
+  const pal = PAL[c.pal][dk];
+  pal.forEach((h, i) => cu.uPal.value[i].set(...hex3(h)));
+  cu.uWheel.value.set(...(c.wheel ? CYC[dk] : [0, 0, 0]));
+  $('barCol').style.background = 'linear-gradient(to right,' + (c.wheel ? [...pal, pal[0]] : pal).join(',') + ')';
   $('legL').textContent = md.legend[0];
   $('legR').textContent = md.legend[1];
   $('legSize').textContent = md.legend[2];
@@ -751,10 +750,10 @@ const MODELS = {
     n: '01', zh: '圖表', en: 'PLOT', glyph: '圖', desc: '橫是時間，上是音高，前是音色。最直接的一張圖。',
     points: true, wall: true, lines: 'chain', axes: axesPlot, place: placePlot,
     home: { pos: [2.3, 1.0, 5.2], target: [0, -0.2, 0] },
-    // 顏色 = 位置的函數：t = lin·(x,y,z) + off，山水色階。上下（音高）占最多，其次是音色和時間
-    cloud: { pal: 'land', lin: [0.10, 0.90, 0.20, 0.66], R0: 0.03, Rk: 0.09, grow: 0.6, dot: 0.018 },
+    // 顏色 = 位置的函數：t = lin·(x,y,z) + off，Grand Budapest 色階。上下（音高）占最多，其次是音色和時間
+    cloud: { pal: 'budapest', lin: [0.10, 0.90, 0.20, 0.66], R0: 0.03, Rk: 0.09, grow: 0.6, dot: 0.018 },
     legend: ['低音', '高音', '點雲的大小 = 響度'],
-    crow: ['色', '位置 → 顏色', '顏色只由位置決定：同一個位置永遠是同一個顏色。從下到上是紫、藍、青、綠、金，主要跟著音高，音色和時間只帶一點點偏移。', ''],
+    crow: ['色', '位置 → 顏色', '顏色只由位置決定：同一個位置永遠是同一個顏色。從下到上是酒紅、灰藍、粉、珊瑚、橙、蜜金，主要跟著音高，音色和時間只帶一點點偏移。配色參考 Wes Anderson 的 The Grand Budapest Hotel。', ''],
     rows: [
       ['X', '時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'],
       ['Y', '音高', '頻譜空間的上下，由低到高。音高與音色是各自獨立的維度。', 'Smalley 1997 · Wessel 1979'],
@@ -766,10 +765,10 @@ const MODELS = {
     n: '02', zh: '發射', en: 'EMIT', glyph: '射', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
     points: true, wall: false, lines: 'rays', emitter: true, axes: axesFire, place: placeFire,
     home: { pos: [1.1, 1.35, 4.2], target: [0, -0.3, -0.3] },
-    // 顏色看離發射口多遠（餘燼色階：近是朱，遠是紫）；越遠點雲越散
-    cloud: { pal: 'ember', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 1.8, dot: 0.016 },
+    // 顏色看離發射口多遠（Life Aquatic 色階：近是朱紅，遠是海藍）；越遠點雲越散
+    cloud: { pal: 'zissou', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 1.8, dot: 0.016 },
     legend: ['近　剛射出', '遠　快消失', '大小 = 響度；越遠越散開'],
-    crow: ['色', '距離 → 顏色', '剛離開發射口是朱紅，越飛越遠，依序變成橙、金、青磁、藍，最後是紫。越遠，點雲也越散、越淡。', 'Chowning 1971 · 距離線索'],
+    crow: ['色', '距離 → 顏色', '剛離開發射口是朱紅，越飛越遠，依序變成琥珀、黃、淺海藍，最後是深海藍。越遠，點雲也越散、越淡。配色參考 Wes Anderson 的 The Life Aquatic with Steve Zissou。', 'Chowning 1971 · 距離線索'],
     rows: [
       ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
       ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
@@ -781,10 +780,10 @@ const MODELS = {
     n: '03', zh: '年輪', en: 'RINGS', glyph: '輪', desc: '十二個音名繞成一圈，八度往上疊成螺旋，時間往外擴。',
     points: true, wall: false, lines: 'chain', axes: axesRings, place: placeRings,
     home: { pos: [1.7, 2.3, 3.9], target: [0, -0.1, 0], fit: 1.18 },
-    // 色相 = 繞著中軸的角度（也就是音名），亮度 = 高度（八度）
-    cloud: { wheel: true, lin: [0, 0, 0, 0], R0: 0.026, Rk: 0.07, grow: 0.25, dot: 0.018 },
+    // 色 = 繞著中軸的角度（也就是音名，Darjeeling 色階頭尾相接），明暗 = 高度（八度）
+    cloud: { pal: 'darjeeling', wheel: true, lin: [0, 0, 0, 0], R0: 0.026, Rk: 0.07, grow: 0.25, dot: 0.018 },
     legend: ['C', 'B　繞一圈回到 C', '點雲的大小 = 響度'],
-    crow: ['色', '音名 → 色相', '色相就是音名：每一個 C 都是同一個顏色，十二個音繞一圈，色相也繞一圈回到原點。亮度跟著八度，越高越亮。', 'Shepard 1964 · pitch circularity'],
+    crow: ['色', '音名 → 顏色', '顏色就是音名：每一個 C 都是同一個顏色，十二個音繞一圈，顏色也繞一圈回到原點（紅、橘、芥黃、青綠、天藍、薰衣草）。明暗跟著八度，越高越亮。配色參考 Wes Anderson 的 The Darjeeling Limited。', 'Shepard 1964 · pitch circularity'],
     rows: [
       ['圓', '音名', 'C 到 B 十二個音繞成一圈；高一個八度的同名音，落在同一個角度。', 'Shepard 1964 · pitch circularity'],
       ['高', '八度', '越高的聲音越往上，一圈一圈疊成螺旋。唱一個上行的音階，就會看到點沿著螺旋爬升。', ''],
