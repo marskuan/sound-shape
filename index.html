@@ -5,40 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>聲音的形狀</title>
 <meta name="description" content="用麥克風把你的聲音即時變成 3D 的形狀。五種模型：圖表、發射、年輪、水面、山脈。聲音只在你的瀏覽器裡分析，不會上傳。">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23a93400'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23b5ffc2' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23ee6a4d'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23000000' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chiron+Sung+HK:wght@300;400&family=Chiron+Hei+HK:wght@400&family=Jost:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* 紙、字、強調色是同一組，取自和田三造《配色事典》第 263 組的四個顏色：
-       Turquoise Green（紙） · Slate Color（字） · Burnt Sienna（強調、小字） · Pinkish Cinnamon（夜裡的小字）
-     白天 = 薄荷綠的紙、石板藍的字、赭紅的小字；夜裡把同一組反過來（石板藍的紙、薄荷綠的字、肉桂粉的小字）。
-     字和底是連動的：淡一點的字和細線，都是這四個顏色按比例混出來的。 */
+  /* 黑底白字（不分白天夜裡）。淡一點的字和細線是白色按比例壓暗的灰。強調色只有一點珊瑚紅。 */
   :root {
-    color-scheme: light;
-    --paper: #b5ffc2;   /* Turquoise Green */
-    --ink: #1b3644;     /* Slate Color：標題、按鈕、數字 */
-    --ink-2: #3a5e5d;   /* 字色 80% + 紙色 20%：說明文字 */
-    --ink-3: #773518;   /* Burnt Sienna + 字色：座標的小字 */
-    --hair: #a3e7b3;    /* 紙色壓 12% 字色 */
-    --axis: #87c39c;    /* 紙色壓 30% 字色 */
-    --shu: #a93400;     /* Burnt Sienna：現在、印章、底線 */
+    color-scheme: dark;
+    --paper: #000000;
+    --ink: #ffffff;
+    --ink-2: #c9c9c9;
+    --ink-3: #8c8c8c;
+    --hair: #1c1c1c;
+    --axis: #3d3d3d;
+    --shu: #ee6a4d;
     /* 字型：標題和名稱用「昭源宋體」（Chiron Sung，細緻的明體），內文用「昭源黑體」，英文和數字用 Jost（幾何、清瘦）。
        載不到網路字型時，退回各系統自己的明體／黑體。 */
     --serif: "Chiron Sung HK", "Noto Serif TC", "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", "PMingLiU", serif;
     --sans: "Jost", "Chiron Hei HK", system-ui, "Microsoft JhengHei", "PingFang TC", sans-serif;
-  }
-  @media (prefers-color-scheme: dark) {
-    :root:where(:not([data-theme="light"])) {
-      color-scheme: dark;
-      --paper: #1b3644; --ink: #b5ffc2; --ink-2: #93d3a6; --ink-3: #c7956e;
-      --hair: #2a4a51; --axis: #466e67; --shu: #f2ad78;
-    }
-  }
-  :root[data-theme="dark"] {
-    color-scheme: dark;
-    --paper: #1b3644; --ink: #b5ffc2; --ink-2: #93d3a6; --ink-3: #c7956e;
-    --hair: #2a4a51; --axis: #466e67; --shu: #f2ad78;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
