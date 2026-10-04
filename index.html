@@ -5,21 +5,24 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>聲音的形狀</title>
 <meta name="description" content="用麥克風把你的聲音即時變成 3D 的形狀。五種模型：圖表、發射、年輪、水面、山脈。聲音只在你的瀏覽器裡分析，不會上傳。">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23d4402a'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23f3f0e8' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='3' fill='%23a93400'/%3E%3Ctext x='16' y='24' font-size='22' text-anchor='middle' fill='%23b5ffc2' font-family='serif'%3E聲%3C/text%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chiron+Sung+HK:wght@300;400&family=Chiron+Hei+HK:wght@400&family=Jost:wght@400;500&display=swap" rel="stylesheet">
 <style>
-  /* 和紙與墨：一張紙、一種墨、一點朱。其餘都留白。 */
+  /* 紙、字、強調色是同一組，取自和田三造《配色事典》第 263 組的四個顏色：
+       Turquoise Green（紙） · Slate Color（字） · Burnt Sienna（強調、小字） · Pinkish Cinnamon（夜裡的小字）
+     白天 = 薄荷綠的紙、石板藍的字、赭紅的小字；夜裡把同一組反過來（石板藍的紙、薄荷綠的字、肉桂粉的小字）。
+     字和底是連動的：淡一點的字和細線，都是這四個顏色按比例混出來的。 */
   :root {
     color-scheme: light;
-    --paper: #f3f0e8;
-    --ink: #1d1c19;
-    --ink-2: #5b5850;
-    --ink-3: #8f8b80;
-    --hair: #dedacd;
-    --axis: #b9b4a6;
-    --shu: #d4402a;
+    --paper: #b5ffc2;   /* Turquoise Green */
+    --ink: #1b3644;     /* Slate Color：標題、按鈕、數字 */
+    --ink-2: #3a5e5d;   /* 字色 80% + 紙色 20%：說明文字 */
+    --ink-3: #773518;   /* Burnt Sienna + 字色：座標的小字 */
+    --hair: #a3e7b3;    /* 紙色壓 12% 字色 */
+    --axis: #87c39c;    /* 紙色壓 30% 字色 */
+    --shu: #a93400;     /* Burnt Sienna：現在、印章、底線 */
     /* 字型：標題和名稱用「昭源宋體」（Chiron Sung，細緻的明體），內文用「昭源黑體」，英文和數字用 Jost（幾何、清瘦）。
        載不到網路字型時，退回各系統自己的明體／黑體。 */
     --serif: "Chiron Sung HK", "Noto Serif TC", "Shippori Mincho", "Yu Mincho", "Hiragino Mincho ProN", "PMingLiU", serif;
@@ -28,14 +31,14 @@
   @media (prefers-color-scheme: dark) {
     :root:where(:not([data-theme="light"])) {
       color-scheme: dark;
-      --paper: #151412; --ink: #e9e4d7; --ink-2: #b3ae9f; --ink-3: #7f7b6f;
-      --hair: #2a2823; --axis: #4a463e; --shu: #ee6a4d;
+      --paper: #1b3644; --ink: #b5ffc2; --ink-2: #93d3a6; --ink-3: #c7956e;
+      --hair: #2a4a51; --axis: #466e67; --shu: #f2ad78;
     }
   }
   :root[data-theme="dark"] {
     color-scheme: dark;
-    --paper: #151412; --ink: #e9e4d7; --ink-2: #b3ae9f; --ink-3: #7f7b6f;
-    --hair: #2a2823; --axis: #4a463e; --shu: #ee6a4d;
+    --paper: #1b3644; --ink: #b5ffc2; --ink-2: #93d3a6; --ink-3: #c7956e;
+    --hair: #2a4a51; --axis: #466e67; --shu: #f2ad78;
   }
   * { box-sizing: border-box; }
   html, body { height: 100%; margin: 0; }
@@ -56,13 +59,6 @@
   .lbl.now { color: var(--shu); font-family: var(--serif); letter-spacing: 0.2em; }
   .lbl.obj { font-family: var(--serif); font-size: 12px; color: var(--ink); text-align: center; letter-spacing: 0.1em; }
   .lbl.obj small { display: block; font-family: var(--sans); font-size: 10px; color: var(--ink-3); letter-spacing: 0.04em; }
-
-  /* 背後一個很淡、微微暈開的大字：像海報上的大標。只當氣氛，不擋任何東西 */
-  .ghost {
-    position: fixed; z-index: 1; right: 1vw; bottom: -9vh; font: 300 60vh/1 var(--serif); color: var(--ink); opacity: .045;
-    filter: blur(1.6px); pointer-events: none; user-select: none; transition: opacity .5s ease; white-space: nowrap;
-  }
-  .ghost.out { opacity: 0; }
 
   .hud { position: fixed; z-index: 2; }
   .head { top: 28px; left: 30px; display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
@@ -154,7 +150,6 @@
     .head { top: 14px; left: 16px; flex-direction: row; align-items: center; }
     .head h1 { writing-mode: horizontal-tb; font-size: 18px; letter-spacing: 0.3em; }
     .head::after { display: none; }
-    .ghost { font-size: 64vw; right: -6vw; bottom: 14vh; }
     .theory { top: 52px; right: 16px; left: 16px; width: auto; max-height: 52vh; background: var(--paper); padding: 0 0 4px; }
     .foot { left: 16px; bottom: 100px; max-width: calc(100vw - 32px); }
     .bar-btns { bottom: 12px; width: calc(100% - 20px); justify-content: center; flex-wrap: wrap; row-gap: 6px; }
@@ -173,7 +168,6 @@
 </head>
 <body>
 <div id="stage"></div>
-<div class="ghost" id="ghost" aria-hidden="true">圖</div>
 <div id="labels"></div>
 <div id="tip"></div>
 
@@ -190,6 +184,7 @@
     <div class="row" id="r2"></div>
     <div class="row" id="r3"></div>
     <div class="row" id="rc"></div>
+    <div class="row" id="rs"></div>
     <div class="row" id="rInk"><div class="k"><i>濃淡</i>音調 ↔ 噪音</div>
       <p>點越濃，是越清楚的音高（note）；越淡，是噪音（noise）；之間是含糊的音高（node）。</p><cite>Smalley 1997 · spectral typology</cite></div>
     <div class="row"><div class="k"><i>短暫</i>只留幾秒</div>
@@ -595,9 +590,10 @@ cloudGeo.instanceCount = 0;
 
 const cloudVert = `
   attribute vec4 aSeed; attribute vec4 iPos; attribute vec4 iAttr;
-  uniform float uScale, uTime, uDens, uMix, uMode, uAlpha, uGrow, uDot, uRad, uPixMin;
+  uniform float uScale, uTime, uDens, uMix, uMode, uAlpha, uGrow, uDot, uRad, uPixMin, uPxMax;
+  uniform vec3 uSz, uShp;                                                      // 大小規則 (距離, 低音, 響度)；形狀 (形狀, 距離變柔, 留幾成)
   uniform vec2 uRes; uniform vec4 uLin; uniform vec3 uOrigin, uInk, uWheel; uniform vec3 uPal[6];
-  varying vec3 vCol; varying float vA; varying vec2 vUV; varying float vHalo;
+  varying vec3 vCol; varying float vA, vShape, vSoft; varying vec2 vUV; varying float vHalo;
   vec3 ramp(float t) {
     float f = clamp(t, 0.0, 1.0) * 5.0; int i = int(min(floor(f), 4.0));
     return mix(uPal[i], uPal[i + 1], f - float(i));
@@ -608,10 +604,10 @@ const cloudVert = `
   }
   void main() {
     float halo = position.z;
-    vHalo = halo; vUV = position.xy; vCol = uInk; vA = 0.0;
+    vHalo = halo; vUV = position.xy; vCol = uInk; vA = 0.0; vShape = uShp.x; vSoft = 0.0;
     vec3 sd = fract(aSeed.xyz + iAttr.w * vec3(1.0, 0.618, 0.382));          // 每一團自己的樣子不一樣
     float rank = fract(aSeed.w + iAttr.w * 0.7);
-    bool shown = halo > 0.5 ? iAttr.z > 0.02 : rank < iAttr.z * uDens;       // 小聲、或畫質降低時，只留一部分點
+    bool shown = halo > 0.5 ? iAttr.z > 0.02 : rank < iAttr.z * uDens * uShp.z;       // 小聲、或畫質降低時，只留一部分點
     if (!shown) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
     float R = iPos.w * (1.0 + uGrow * iAttr.y);                              // 越久越散開
     float th = 6.2831853 * sd.x, cz = 2.0 * sd.y - 1.0, sz = sqrt(max(0.0, 1.0 - cz * cz));
@@ -631,26 +627,46 @@ const cloudVert = `
     } else col = ramp(t);
     vCol = mix(uInk, col, uMix);
 
+    // 顆粒的大小：各模型依自己的理論，看離發射口多遠、音域高低、響度（見 MODELS[*].cloud.sz）
+    float d01 = clamp(length(wp - uOrigin) / 2.3, 0.0, 1.0), y01 = clamp(wp.y * 0.5 + 0.5, 0.0, 1.0);
+    float loud = clamp((iAttr.z - 0.4) / 0.6, 0.0, 1.0);
+    float sizeK = (1.0 + uSz.x * d01) * (1.0 + uSz.y * (1.0 - y01)) * mix(1.0, 0.55 + 0.9 * loud, uSz.z);
+    vSoft = clamp(d01 * uShp.y, 0.0, 1.0);
+
     if (uMode > 1.5) wp.z = -1.0; else if (uMode > 0.5) wp.y = -1.0;           // 淡影：壓到背牆／地板上
     vec4 mv = modelViewMatrix * vec4(wp, 1.0);
-    float diam = halo > 0.5 ? R * 3.2 : uDot * (0.55 + 0.9 * fract(sd.x * 7.13 + sd.z * 3.31));
-    float px = clamp(diam * uScale / -mv.z, halo > 0.5 ? 6.0 : uPixMin, halo > 0.5 ? 180.0 : 14.0);
+    float diam = halo > 0.5 ? R * 3.2 : uDot * sizeK * (0.55 + 0.9 * fract(sd.x * 7.13 + sd.z * 3.31));
+    float px = clamp(diam * uScale / -mv.z, halo > 0.5 ? 6.0 : uPixMin, halo > 0.5 ? 180.0 : uPxMax);
     gl_Position = projectionMatrix * mv;
-    gl_Position.xy += position.xy * 0.5 * px * (2.0 / uRes) * gl_Position.w;
-    vA = iAttr.x * uAlpha * (halo > 0.5 ? 0.09 : 1.0);
+    vec2 q = position.xy;                                                      // 方片的角（單位 -1..1）
+    if (uShp.x > 0.5 && halo < 0.5) {                                          // 筆觸：一小段順著「繞中軸的切線」的短線，像年輪的紋理
+      vec3 rv = vec3(wp.x, 0.0, wp.z); float rl = max(length(rv), 1e-3);
+      vec3 tg = vec3(-rv.z, 0.0, rv.x) / rl;
+      vec4 c0 = projectionMatrix * modelViewMatrix * vec4(wp, 1.0), c1 = projectionMatrix * modelViewMatrix * vec4(wp + tg * 0.05, 1.0);
+      vec2 dir = normalize((c1.xy / c1.w - c0.xy / c0.w) * uRes + vec2(1e-6));   // 這條切線在螢幕上的方向（像素）
+      q = dir * (position.x * 3.4) + vec2(-dir.y, dir.x) * position.y;           // 長是粗的 3.4 倍
+    }
+    gl_Position.xy += q * 0.5 * px * (2.0 / uRes) * gl_Position.w;
+    vA = iAttr.x * uAlpha * (halo > 0.5 ? 0.09 : mix(1.0, 0.4, vSoft));         // 越大越柔的顆粒也越淡，免得疊成一片
   }`;
 const cloudFrag = `
-  varying vec3 vCol; varying float vA; varying vec2 vUV; varying float vHalo;
+  varying vec3 vCol; varying float vA, vShape, vSoft; varying vec2 vUV; varying float vHalo;
   void main() {
     float r = length(vUV);
     if (r > 1.0) discard;
-    float a = vHalo > 0.5 ? (1.0 - r) * (1.0 - r) : 1.0 - smoothstep(0.55, 1.0, r);
+    float a;
+    if (vHalo > 0.5) a = (1.0 - r) * (1.0 - r);
+    else {
+      float disc = 1.0 - smoothstep(0.55, 1.0, r);                                  // 實心的點（筆觸是被拉長的同一個形狀）
+      float soft = pow(1.0 - r, 1.6);                                               // 柔邊的光點
+      a = mix(disc, soft, vSoft);
+    }
     gl_FragColor = vec4(vCol, vA * a);
   }`;
 const scaleU = { value: 800 };
 const cu = {                                     // 三個網格（本體、地板影、背牆影）共用的 uniform
   uScale: scaleU, uTime: { value: 0 }, uRes: { value: new THREE.Vector2(1, 1) }, uPixMin: { value: 1.3 },
-  uGrow: { value: 0.6 }, uDot: { value: 0.015 }, uRad: { value: 0 }, uLin: { value: new THREE.Vector4() }, uOrigin: { value: new THREE.Vector3() },
+  uGrow: { value: 0.6 }, uDot: { value: 0.015 }, uRad: { value: 0 }, uPxMax: { value: 14 }, uSz: { value: new THREE.Vector3() }, uShp: { value: new THREE.Vector3(0, 0, 1) }, uLin: { value: new THREE.Vector4() }, uOrigin: { value: new THREE.Vector3() },
   uInk: { value: new THREE.Vector3() }, uWheel: { value: new THREE.Vector3() }, uPal: { value: Array.from({ length: 6 }, () => new THREE.Vector3()) },
 };
 function makeCloud(mode, dens, mix, alpha) {
@@ -679,6 +695,7 @@ const PAL = {
 };
 const CYC = { light: [1, 0.8, 0.18], dark: [1, 0.88, 0.2] };         // 繞圈的色階：[開關, 最低一層乘上的亮度, 最高一層混入的白]
 const hex3 = h => { const n = parseInt(h.replace('#', ''), 16); return [(n >> 16) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255]; };
+let pxMaxCss = 10;                              // 單顆點最大幾個螢幕像素（各模型不同）
 const isDark = () => new THREE.Color(T.paper).r < 0.3;
 function applyCloud() {                         // 換模型、換深淺色時：把這個模型的配色、大小規則送給著色器，也畫圖例的色條
   cu.uInk.value.set(...hex3(T['ink-3']));
@@ -690,6 +707,10 @@ function applyCloud() {                         // 換模型、換深淺色時�
   cu.uOrigin.value.set(...(c.origin || [0, 0, 0]));
   cu.uGrow.value = c.grow;
   cu.uDot.value = c.dot;
+  cu.uSz.value.set(...c.sz);
+  cu.uShp.value.set(...c.shp);
+  pxMaxCss = c.pxMax;
+  cu.uPxMax.value = pxMaxCss * renderer.getPixelRatio();
   const pal = PAL[c.pal][dk];
   pal.forEach((h, i) => cu.uPal.value[i].set(...hex3(h)));
   cu.uWheel.value.set(...(c.wheel ? CYC[dk] : [0, 0, 0]));
@@ -747,12 +768,13 @@ scene.add(ring, hoverRing);
 const ORDER = ['plot', 'fire', 'rings', 'water', 'ridge'];
 const MODELS = {
   plot: {
-    n: '01', zh: '圖表', en: 'PLOT', glyph: '圖', desc: '橫是時間，上是音高，前是音色。最直接的一張圖。',
+    n: '01', zh: '圖表', en: 'PLOT', desc: '橫是時間，上是音高，前是音色。最直接的一張圖。',
     points: true, wall: true, lines: 'chain', axes: axesPlot, place: placePlot,
     home: { pos: [2.3, 1.0, 5.2], target: [0, -0.2, 0] },
     // 顏色 = 位置的函數：t = lin·(x,y,z) + off，Grand Budapest 色階。上下（音高）占最多，其次是音色和時間
-    cloud: { pal: 'budapest', lin: [0.10, 0.90, 0.20, 0.66], R0: 0.03, Rk: 0.09, grow: 0.6, dot: 0.018 },
-    legend: ['低音', '高音', '點雲的大小 = 響度'],
+    cloud: { pal: 'budapest', lin: [0.10, 0.90, 0.20, 0.66], R0: 0.03, Rk: 0.09, grow: 0.6, dot: 0.011, sz: [0, 0, 0.7], shp: [0, 0, 1], pxMax: 9 },
+    legend: ['低音', '高音', '顆粒細如砂；越大聲，顆粒和整團都越大'],
+    srow: ['粒', '大小 → 響度', '顆粒很細，像一把砂。越大聲，每一顆和整團都越大；一直保持細小，是為了讓上下、前後的位置讀得清楚。', ''],
     crow: ['色', '位置 → 顏色', '顏色只由位置決定：同一個位置永遠是同一個顏色。從下到上是酒紅、灰藍、粉、珊瑚、橙、蜜金，主要跟著音高，音色和時間只帶一點點偏移。配色參考 Wes Anderson 的 The Grand Budapest Hotel。', ''],
     rows: [
       ['X', '時間', '聲音是會展開的形態：起音、持續、結束。', 'Smalley 1997 · spectromorphology'],
@@ -762,12 +784,13 @@ const MODELS = {
     ],
   },
   fire: {
-    n: '02', zh: '發射', en: 'EMIT', glyph: '射', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
+    n: '02', zh: '發射', en: 'EMIT', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
     points: true, wall: false, lines: 'rays', emitter: true, axes: axesFire, place: placeFire,
     home: { pos: [1.1, 1.35, 4.2], target: [0, -0.3, -0.3] },
     // 顏色看離發射口多遠（Life Aquatic 色階：近是朱紅，遠是海藍）；越遠點雲越散
-    cloud: { pal: 'zissou', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 1.8, dot: 0.016 },
-    legend: ['近　剛射出', '遠　快消失', '大小 = 響度；越遠越散開'],
+    cloud: { pal: 'zissou', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 1.8, dot: 0.01, sz: [4.5, 0, 0.3], shp: [0, 1.25, 1], pxMax: 42 },
+    legend: ['近　剛射出', '遠　快消失', '顆粒越遠越大、越淡；團的大小 = 響度'],
+    srow: ['粒', '大小 → 距離', '剛離開發射口是細小、明亮的火星；越飛越遠，每一顆越脹越大、越淡，像聲音向四面散開、能量被稀釋。', ''],
     crow: ['色', '距離 → 顏色', '剛離開發射口是朱紅，越飛越遠，依序變成琥珀、黃、淺海藍，最後是深海藍。越遠，點雲也越散、越淡。配色參考 Wes Anderson 的 The Life Aquatic with Steve Zissou。', 'Chowning 1971 · 距離線索'],
     rows: [
       ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
@@ -777,12 +800,13 @@ const MODELS = {
     ],
   },
   rings: {
-    n: '03', zh: '年輪', en: 'RINGS', glyph: '輪', desc: '十二個音名繞成一圈，八度往上疊成螺旋，時間往外擴。',
+    n: '03', zh: '年輪', en: 'RINGS', desc: '十二個音名繞成一圈，八度往上疊成螺旋，時間往外擴。',
     points: true, wall: false, lines: 'chain', axes: axesRings, place: placeRings,
     home: { pos: [1.7, 2.3, 3.9], target: [0, -0.1, 0], fit: 1.18 },
     // 色 = 繞著中軸的角度（也就是音名，Darjeeling 色階頭尾相接），明暗 = 高度（八度）
-    cloud: { pal: 'darjeeling', wheel: true, lin: [0, 0, 0, 0], R0: 0.026, Rk: 0.07, grow: 0.25, dot: 0.018 },
-    legend: ['C', 'B　繞一圈回到 C', '點雲的大小 = 響度'],
+    cloud: { pal: 'darjeeling', wheel: true, lin: [0, 0, 0, 0], R0: 0.034, Rk: 0.08, grow: 0.25, dot: 0.011, sz: [0, 1.7, 0], shp: [1, 0, 0.7], pxMax: 12 },
+    legend: ['C', 'B　繞一圈回到 C', '筆觸順著年輪的方向；低音粗而長，高音細而短；團的大小 = 響度'],
+    srow: ['紋', '大小 → 音域', '每一顆是一小段順著年輪方向的筆觸。低音粗而長，越高越細越短，最後變成細點：低沉的聲音「比較大」，尖細的聲音「比較小」。', 'Mondloch & Maurer 2004 · 音高 ↔ 大小'],
     crow: ['色', '音名 → 顏色', '顏色就是音名：每一個 C 都是同一個顏色，十二個音繞一圈，顏色也繞一圈回到原點（紅、橘、芥黃、青綠、天藍、薰衣草）。明暗跟著八度，越高越亮。配色參考 Wes Anderson 的 The Darjeeling Limited。', 'Shepard 1964 · pitch circularity'],
     rows: [
       ['圓', '音名', 'C 到 B 十二個音繞成一圈；高一個八度的同名音，落在同一個角度。', 'Shepard 1964 · pitch circularity'],
@@ -792,7 +816,7 @@ const MODELS = {
     ],
   },
   water: {
-    n: '04', zh: '水面', en: 'WATER', glyph: '水', desc: '每一個聲音落在水面，擴成一圈圈漣漪；越大聲，波越高。',
+    n: '04', zh: '水面', en: 'WATER', desc: '每一個聲音落在水面，擴成一圈圈漣漪；越大聲，波越高。',
     ridge: 'water', axes: axesWater,
     home: { pos: [0, 2.2, 4.4], target: [0, -0.85, 0.1], fit: 1.15 },
     rows: [
@@ -803,7 +827,7 @@ const MODELS = {
     ],
   },
   ridge: {
-    n: '05', zh: '山脈', en: 'RIDGE', glyph: '山', desc: '每一刻的頻譜畫成一條線，疊成一排山；新的在前，舊的退向遠方。',
+    n: '05', zh: '山脈', en: 'RIDGE', desc: '每一刻的頻譜畫成一條線，疊成一排山；新的在前，舊的退向遠方。',
     ridge: 'ridge', axes: axesRidge,
     home: { pos: [0, 2.35, 4.3], target: [0, -0.5, 0], fit: 1.08 },
     rows: [
@@ -1056,7 +1080,8 @@ function resize() {
   scalePx = buf.y / (2 * Math.tan(camera.fov * Math.PI / 360));
   scaleU.value = scalePx;
   cu.uRes.value.copy(buf);
-  cu.uPixMin.value = 1.3 * renderer.getPixelRatio();       // 最小的點至少 1.3 個螢幕像素，高解析度的手機上才看得到
+  cu.uPixMin.value = 1.3 * renderer.getPixelRatio();
+  cu.uPxMax.value = pxMaxCss * renderer.getPixelRatio();       // 最小的點至少 1.3 個螢幕像素，高解析度的手機上才看得到
 }
 new ResizeObserver(resize).observe(stage);
 function homeCamera() {
@@ -1106,18 +1131,17 @@ function renderRows() {
   });
   const c = MD().crow;
   $('rc').innerHTML = c ? `<div class="k"><i>${c[0]}</i>${c[1]}</div><p>${c[2]}</p>${c[3] ? `<cite>${c[3]}</cite>` : ''}` : '';
+  const z = MD().srow;
+  $('rs').innerHTML = z ? `<div class="k"><i>${z[0]}</i>${z[1]}</div><p>${z[2]}</p>${z[3] ? `<cite>${z[3]}</cite>` : ''}` : '';
 }
 function setModel(id) {
   if (!MODELS[id]) return;
   model = id;
   const md = MD();
   $('modelName').textContent = md.zh;
-  const g = $('ghost');                                   // 背後的大字：淡出、換字、淡入
-  g.classList.add('out');
-  setTimeout(() => { g.textContent = md.glyph; g.classList.remove('out'); }, 260);
   cloudMain.visible = cloudFloor.visible = !!md.points;
   cloudWall.visible = !!md.points && !!md.wall;
-  for (const id of ['rc', 'rInk', 'legend']) $(id).style.display = md.points ? '' : 'none';     // 山脈、水面沒有點，也就沒有點的顏色和濃淡
+  for (const id of ['rc', 'rs', 'rInk', 'legend']) $(id).style.display = md.points ? '' : 'none';     // 山脈、水面沒有點，也就沒有點的顏色和濃淡
   applyCloud();
   emitter.visible = !!md.emitter;
   ridgeSpec.group.visible = md.ridge === 'ridge';
@@ -1322,8 +1346,7 @@ matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { ap
 resize();
 const first = location.hash.slice(1);
 setModel(MODELS[first] ? first : 'plot');
-$('ghost').textContent = MD().glyph;
-window.__viz = { updateWater, updateRidge, onMessage: onAudio, setModel, getModel: () => model, cfg, pts, specRows, ripples, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic, setQuality, perf, cu, cloudGeo, MODELS, applyCloud, scene, renderer, THREE };
+window.__viz = { updateWater, updateRidge, onMessage: onAudio, setModel, getModel: () => model, cfg, pts, specRows, ripples, camera, controls, animate, held, pitchOf, analyseBlock, emit, micTick, mic, startMic, setQuality, perf, cu, cloudGeo, MODELS, applyCloud, applyTheme, scene, renderer, THREE };
 requestAnimationFrame(animate);
 startMic();
 </script>
