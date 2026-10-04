@@ -432,8 +432,8 @@ function placeRings(p, age) {
 
 // ===== 模型 04、05 共用：一排一排的細線（山脈、水面），後面的線被前面的山遮住 =====
 class Ridge {
-  constructor(rows, cols) {
-    this.rows = rows; this.cols = cols; this.items = [];
+  constructor(rows, cols, colorize = false) {
+    this.rows = rows; this.cols = cols; this.items = []; this.colorize = colorize;
     this.group = new THREE.Group(); this.group.visible = false; scene.add(this.group);
     const idx = [];
     for (let j = 0; j < cols - 1; j++) { const a = 2 * j; idx.push(a, a + 1, a + 2, a + 1, a + 3, a + 2); }
@@ -453,10 +453,12 @@ class Ridge {
     }
   }
   setRow(i, z, ys, alpha, floorY) {
-    const it = this.items[i], n = this.cols, c = inkRGB;
+    const it = this.items[i], n = this.cols;
+    let c = inkRGB;
     for (let j = 0; j < n; j++) {
       const x = -1 + 2 * j / (n - 1);
       it.lp[j * 3] = x; it.lp[j * 3 + 1] = ys[j]; it.lp[j * 3 + 2] = z;
+      if (this.colorize) c = ridgeColor(0.85 * clamp((ys[j] - floorY) / 1.15, 0, 1) + 0.15 * (x + 1) / 2, _rc);   // 線的顏色 = 位置的函數：主要看高度，一點點看頻率
       it.lc[j * 4] = c.r; it.lc[j * 4 + 1] = c.g; it.lc[j * 4 + 2] = c.b; it.lc[j * 4 + 3] = alpha;
       it.fp[j * 6] = x; it.fp[j * 6 + 1] = ys[j]; it.fp[j * 6 + 2] = z;
       it.fp[j * 6 + 3] = x; it.fp[j * 6 + 4] = floorY; it.fp[j * 6 + 5] = z;
@@ -467,8 +469,15 @@ class Ridge {
   }
   hideFrom(i) { for (let k = i; k < this.rows; k++) this.items[k].line.visible = this.items[k].fill.visible = false; }
 }
+// 山脈的線色：Wes Anderson 的 Moonrise Kingdom（谷底灰青 → 天藍 → 粉 → 奶油黃 → 赭橙）
+const RIDGE_PAL = ['#798e87', '#85d4e3', '#f4b5bd', '#fad77b', '#c27d38'].map(h => new THREE.Color(h));
+const _rc = new THREE.Color();
+function ridgeColor(t, out) {
+  const f = clamp(t, 0, 1) * (RIDGE_PAL.length - 1), i = Math.min(Math.floor(f), RIDGE_PAL.length - 2);
+  return out.copy(RIDGE_PAL[i]).lerp(RIDGE_PAL[i + 1], f - i);
+}
 const BANDS = 96, B_LO = 80, B_HI = 8000;
-const ridgeSpec = new Ridge(110, BANDS);     // 山脈：每一條是某一刻的頻譜
+const ridgeSpec = new Ridge(110, BANDS, true);     // 山脈：每一條是某一刻的頻譜，線上有顏色
 const WATER_ROWS = 38, WATER_COLS = 84, WATER_Y = -0.74;
 const ridgeWater = new Ridge(WATER_ROWS, WATER_COLS);   // 水面：固定的一排排線，被漣漪推高
 const specRows = [], ripples = [];
@@ -547,7 +556,7 @@ function updateWater(now) {
 const CAP = 3000;
 const pts = new Array(CAP).fill(null);
 let head = 0, tail = 0, count = 0, segId = 0, lastT = -9, lastAdd = -9;
-const NP = 41;                                   // 一團 = 1 片很淡的暈 + 40 顆小點
+const NP = 40;                                   // 一團 = 40 顆小點（沒有暈、沒有霧）
 const cloudGeo = new THREE.InstancedBufferGeometry();
 {
   const corner = new Float32Array(NP * 4 * 3), seed = new Float32Array(NP * 4 * 4), idx = new Uint16Array(NP * 6);
@@ -557,12 +566,12 @@ const cloudGeo = new THREE.InstancedBufferGeometry();
   for (let i = 0; i < NP; i++) {
     const a = rnd(), b = rnd(), c = rnd(), rank = (i * 0.6180339887) % 1;     // rank 用黃金比例數列：只留前幾成的點，也分得很均勻
     for (let k = 0; k < 4; k++) {
-      corner.set([C4[k][0], C4[k][1], i === 0 ? 1 : 0], (i * 4 + k) * 3);
+      corner.set([C4[k][0], C4[k][1], 0], (i * 4 + k) * 3);
       seed.set([a, b, c, rank], (i * 4 + k) * 4);
     }
     idx.set([i * 4, i * 4 + 1, i * 4 + 2, i * 4, i * 4 + 2, i * 4 + 3], i * 6);
   }
-  cloudGeo.setAttribute('position', new THREE.BufferAttribute(corner, 3));      // xy = 方片的角，z = 1 表示那一片是暈
+  cloudGeo.setAttribute('position', new THREE.BufferAttribute(corner, 3));      // xy = 方片的角
   cloudGeo.setAttribute('aSeed', new THREE.BufferAttribute(seed, 4));
   cloudGeo.setIndex(new THREE.BufferAttribute(idx, 1));
 }
@@ -575,9 +584,9 @@ cloudGeo.instanceCount = 0;
 const cloudVert = `
   attribute vec4 aSeed; attribute vec4 iPos; attribute vec4 iAttr;
   uniform float uScale, uTime, uDens, uMix, uMode, uAlpha, uGrow, uDot, uRad, uPixMin, uPxMax;
-  uniform vec3 uSz, uShp;                                                      // 大小規則 (距離, 低音, 響度)；形狀 (形狀, 距離變柔, 留幾成)
+  uniform vec3 uSz, uShp;                                                      // 大小規則 (距離, 低音, 響度)；形狀 (是否攤成弧, -, 留幾成)
   uniform vec2 uRes; uniform vec4 uLin; uniform vec3 uOrigin, uInk, uWheel; uniform vec3 uPal[6];
-  varying vec3 vCol; varying float vA, vShape, vSoft; varying vec2 vUV; varying float vHalo;
+  varying vec3 vCol; varying float vA; varying vec2 vUV;
   vec3 ramp(float t) {
     float f = clamp(t, 0.0, 1.0) * 5.0; int i = int(min(floor(f), 4.0));
     return mix(uPal[i], uPal[i + 1], f - float(i));
@@ -587,11 +596,10 @@ const cloudVert = `
     return mix(uPal[i], uPal[j], f - float(i));
   }
   void main() {
-    float halo = position.z;
-    vHalo = halo; vUV = position.xy; vCol = uInk; vA = 0.0; vShape = uShp.x; vSoft = 0.0;
+    vUV = position.xy; vCol = uInk; vA = 0.0;
     vec3 sd = fract(aSeed.xyz + iAttr.w * vec3(1.0, 0.618, 0.382));          // 每一團自己的樣子不一樣
     float rank = fract(aSeed.w + iAttr.w * 0.7);
-    bool shown = halo > 0.5 ? iAttr.z > 0.02 : rank < iAttr.z * uDens * uShp.z;       // 小聲、或畫質降低時，只留一部分點
+    bool shown = rank < iAttr.z * uDens * uShp.z;       // 小聲、或畫質降低時，只留一部分點
     if (!shown) { gl_Position = vec4(2.0, 2.0, 2.0, 1.0); return; }
     float R = iPos.w * (1.0 + uGrow * iAttr.y);                              // 越久越散開
     float th = 6.2831853 * sd.x, cz = 2.0 * sd.y - 1.0, sz = sqrt(max(0.0, 1.0 - cz * cz));
@@ -604,7 +612,6 @@ const cloudVert = `
         off = tg * dot(off, tg) * 1.7 + rad * dot(off, rad) * 0.45 + vec3(0.0, off.y * 0.55, 0.0);
       }
     }
-    if (halo > 0.5) off = vec3(0.0);
     vec3 wp = iPos.xyz + off;
 
     // 顏色 = 位置的函數（每個模型自己的規則，見 MODELS[*].cloud）
@@ -622,28 +629,21 @@ const cloudVert = `
     float d01 = clamp(length(wp - uOrigin) / 2.3, 0.0, 1.0), y01 = clamp(wp.y * 0.5 + 0.5, 0.0, 1.0);
     float loud = clamp((iAttr.z - 0.4) / 0.6, 0.0, 1.0);
     float sizeK = (1.0 + uSz.x * d01) * (1.0 + uSz.y * (1.0 - y01)) * mix(1.0, 0.55 + 0.9 * loud, uSz.z);
-    vSoft = clamp(d01 * uShp.y, 0.0, 1.0);
 
     if (uMode > 1.5) wp.z = -1.0; else if (uMode > 0.5) wp.y = -1.0;           // 淡影：壓到背牆／地板上
     vec4 mv = modelViewMatrix * vec4(wp, 1.0);
-    float diam = halo > 0.5 ? R * 3.2 : uDot * sizeK * (0.55 + 0.9 * fract(sd.x * 7.13 + sd.z * 3.31));
-    float px = clamp(diam * uScale / -mv.z, halo > 0.5 ? 6.0 : uPixMin, halo > 0.5 ? 180.0 : uPxMax);
+    float diam = uDot * sizeK * (0.55 + 0.9 * fract(sd.x * 7.13 + sd.z * 3.31));
+    float px = clamp(diam * uScale / -mv.z, uPixMin, uPxMax);
     gl_Position = projectionMatrix * mv;
     gl_Position.xy += position.xy * 0.5 * px * (2.0 / uRes) * gl_Position.w;
-    vA = iAttr.x * uAlpha * (halo > 0.5 ? 0.09 : mix(1.0, 0.4, vSoft));         // 越大越柔的顆粒也越淡，免得疊成一片
+    vA = iAttr.x * uAlpha;
   }`;
 const cloudFrag = `
-  varying vec3 vCol; varying float vA, vShape, vSoft; varying vec2 vUV; varying float vHalo;
+  varying vec3 vCol; varying float vA; varying vec2 vUV;
   void main() {
     float r = length(vUV);
     if (r > 1.0) discard;
-    float a;
-    if (vHalo > 0.5) a = (1.0 - r) * (1.0 - r);
-    else {
-      float disc = 1.0 - smoothstep(0.55, 1.0, r);                                  // 實心的點
-      float soft = pow(1.0 - r, 1.6);                                               // 柔邊的光點
-      a = mix(disc, soft, vSoft);
-    }
+    float a = 1.0 - smoothstep(0.55, 1.0, r);                                       // 實心的點，邊緣只柔化半個像素
     gl_FragColor = vec4(vCol, vA * a);
   }`;
 const scaleU = { value: 800 };
@@ -770,11 +770,11 @@ const MODELS = {
     n: '02', zh: '發射', en: 'EMIT', desc: '聲音從一點射出：上下是音高，左右是音色，越大聲飛越遠。',
     points: true, wall: false, lines: 'rays', emitter: true, axes: axesFire, place: placeFire,
     home: { pos: [1.1, 1.35, 4.2], target: [0, -0.3, -0.3] },
-    // 顏色看離發射口多遠（Life Aquatic 色階：近是朱紅，遠是海藍）；越遠點雲越散
-    cloud: { pal: 'zissou', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 1.8, dot: 0.01, sz: [4.5, 0, 0.3], shp: [0, 1.25, 1], pxMax: 42 },
-    legend: ['近　剛射出', '遠　快消失', '顆粒越遠越大、越淡；團的大小 = 響度'],
-    srow: ['粒', '大小 → 距離', '剛離開發射口是細小、明亮的火星；越飛越遠，每一顆越脹越大、越淡，像聲音向四面散開、能量被稀釋。', ''],
-    crow: ['色', '距離 → 顏色', '剛離開發射口是朱紅，越飛越遠，依序變成琥珀、黃、淺海藍，最後是深海藍。越遠，點雲也越散、越淡。配色參考 Wes Anderson 的 The Life Aquatic with Steve Zissou。', 'Chowning 1971 · 距離線索'],
+    // 顏色看離發射口多遠（Life Aquatic 色階：近是朱紅，遠是海藍）
+    cloud: { pal: 'zissou', lin: [0, 0.08, 0, 0], rad: 0.55, origin: [GUN.x, GUN.y, GUN.z], R0: 0.02, Rk: 0.07, grow: 0.5, dot: 0.012, sz: [0.8, 0, 0.3], shp: [0, 0, 1], pxMax: 12 },
+    legend: ['近　剛射出', '遠　快消失', '顆粒越遠稍微大一點、越淡；團的大小 = 響度'],
+    srow: ['粒', '大小 → 距離', '剛離開發射口是細小、明亮的火星；越飛越遠，每一顆稍微變大、越來越淡，最後消失。', ''],
+    crow: ['色', '距離 → 顏色', '剛離開發射口是朱紅，越飛越遠，依序變成琥珀、黃、淺海藍，最後是深海藍。越遠，點也越淡。配色參考 Wes Anderson 的 The Life Aquatic with Steve Zissou。', 'Chowning 1971 · 距離線索'],
     rows: [
       ['X', '水平角 Pan', '聲音的音色決定往左還是往右：悶的往左，尖亮的往右。', 'Grey 1977 · timbre space'],
       ['Y', '仰角 Tilt', '音高決定往上還是往下：高音往上、低音往下。把高音聽成「高」是人很普遍的連結。', 'Pratt 1930 · Rusconi et al. 2006'],
@@ -813,6 +813,7 @@ const MODELS = {
     n: '05', zh: '山脈', en: 'RIDGE', desc: '每一刻的頻譜畫成一條線，疊成一排山；新的在前，舊的退向遠方。',
     ridge: 'ridge', axes: axesRidge,
     home: { pos: [0, 2.35, 4.3], target: [0, -0.5, 0], fit: 1.08 },
+    crow: ['色', '高度 → 顏色', '線的顏色只由位置決定：谷底是灰青，往上依序變成天藍、粉、奶油黃，最高的峰是赭橙；頻率只帶一點點偏移。配色參考 Wes Anderson 的 Moonrise Kingdom。', ''],
     rows: [
       ['橫', '頻率', '左邊是低頻，右邊是高頻（對數刻度，每個八度一樣寬）。', ''],
       ['高', '強度', '山越高，那個頻率上的聲音能量越強。人聲的泛音會長成一排排尖峰。', ''],
@@ -1119,7 +1120,8 @@ function setModel(id) {
   $('modelName').textContent = md.zh;
   cloudMain.visible = cloudFloor.visible = !!md.points;
   cloudWall.visible = !!md.points && !!md.wall;
-  for (const id of ['rc', 'rs', 'rInk', 'legend']) $(id).style.display = md.points ? '' : 'none';     // 山脈、水面沒有點，也就沒有點的顏色和濃淡
+  for (const id of ['rs', 'rInk', 'legend']) $(id).style.display = md.points ? '' : 'none';     // 山脈、水面沒有點，也就沒有點的大小和濃淡
+  $('rc').style.display = md.crow ? '' : 'none';                                                  // 水面沒有顏色說明
   applyCloud();
   emitter.visible = !!md.emitter;
   ridgeSpec.group.visible = md.ridge === 'ridge';
