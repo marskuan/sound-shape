@@ -75,7 +75,7 @@
   .status.wait .dot { background: var(--ink-3); }
   .status.bad .dot { background: var(--shu); }
   .status.bad { color: var(--shu); }
-  .status button { font: inherit; color: var(--ink); background: none; border: 0; border-bottom: 1px solid var(--shu); padding: 0 2px; margin-left: 6px; cursor: pointer; }
+  .status[hidden] { display: none; }
   .hint { font-size: 11px; letter-spacing: .08em; color: var(--ink-3); }
   .now-row { display: flex; gap: 18px; flex-wrap: wrap; font-variant-numeric: tabular-nums; }
   .now-row b { font-weight: 500; color: var(--ink); }
@@ -222,7 +222,6 @@
   <button id="bPause" aria-pressed="false" title="讓畫面停住，慢慢看">暫停</button>
   <button id="bClear" title="把畫面上的聲音全部清掉">清除</button>
   <button id="bRot" aria-pressed="false" title="讓畫面自己慢慢轉">旋轉</button>
-  <button id="bLine" aria-pressed="true" title="顯示或隱藏點之間的連線">連線</button>
   <button id="bLbl" aria-pressed="true" title="顯示或隱藏聲音的名稱標籤">標籤</button>
 </div>
 
@@ -613,6 +612,13 @@ const cloudVert = `
     float th = 6.2831853 * sd.x, cz = 2.0 * sd.y - 1.0, sz = sqrt(max(0.0, 1.0 - cz * cz));
     vec3 off = vec3(sz * cos(th), cz, sz * sin(th)) * R * pow(sd.z, 0.8);    // 中間比較密、邊緣比較稀
     off += 0.09 * R * vec3(sin(uTime * 0.9 + sd.x * 31.0), sin(uTime * 0.7 + sd.y * 29.0), sin(uTime * 1.1 + sd.z * 23.0));   // 極輕的呼吸
+    if (uShp.x > 0.5) {                                                      // 年輪：點雲順著圓周攤成一小段弧，不是一個球
+      vec3 rv = vec3(iPos.x, 0.0, iPos.z); float rl = length(rv);
+      if (rl > 0.05) {
+        vec3 rad = rv / rl, tg = vec3(-rad.z, 0.0, rad.x);
+        off = tg * dot(off, tg) * 1.7 + rad * dot(off, rad) * 0.45 + vec3(0.0, off.y * 0.55, 0.0);
+      }
+    }
     if (halo > 0.5) off = vec3(0.0);
     vec3 wp = iPos.xyz + off;
 
@@ -638,15 +644,7 @@ const cloudVert = `
     float diam = halo > 0.5 ? R * 3.2 : uDot * sizeK * (0.55 + 0.9 * fract(sd.x * 7.13 + sd.z * 3.31));
     float px = clamp(diam * uScale / -mv.z, halo > 0.5 ? 6.0 : uPixMin, halo > 0.5 ? 180.0 : uPxMax);
     gl_Position = projectionMatrix * mv;
-    vec2 q = position.xy;                                                      // 方片的角（單位 -1..1）
-    if (uShp.x > 0.5 && halo < 0.5) {                                          // 筆觸：一小段順著「繞中軸的切線」的短線，像年輪的紋理
-      vec3 rv = vec3(wp.x, 0.0, wp.z); float rl = max(length(rv), 1e-3);
-      vec3 tg = vec3(-rv.z, 0.0, rv.x) / rl;
-      vec4 c0 = projectionMatrix * modelViewMatrix * vec4(wp, 1.0), c1 = projectionMatrix * modelViewMatrix * vec4(wp + tg * 0.05, 1.0);
-      vec2 dir = normalize((c1.xy / c1.w - c0.xy / c0.w) * uRes + vec2(1e-6));   // 這條切線在螢幕上的方向（像素）
-      q = dir * (position.x * 3.4) + vec2(-dir.y, dir.x) * position.y;           // 長是粗的 3.4 倍
-    }
-    gl_Position.xy += q * 0.5 * px * (2.0 / uRes) * gl_Position.w;
+    gl_Position.xy += position.xy * 0.5 * px * (2.0 / uRes) * gl_Position.w;
     vA = iAttr.x * uAlpha * (halo > 0.5 ? 0.09 : mix(1.0, 0.4, vSoft));         // 越大越柔的顆粒也越淡，免得疊成一片
   }`;
 const cloudFrag = `
@@ -657,7 +655,7 @@ const cloudFrag = `
     float a;
     if (vHalo > 0.5) a = (1.0 - r) * (1.0 - r);
     else {
-      float disc = 1.0 - smoothstep(0.55, 1.0, r);                                  // 實心的點（筆觸是被拉長的同一個形狀）
+      float disc = 1.0 - smoothstep(0.55, 1.0, r);                                  // 實心的點
       float soft = pow(1.0 - r, 1.6);                                               // 柔邊的光點
       a = mix(disc, soft, vSoft);
     }
@@ -804,9 +802,9 @@ const MODELS = {
     points: true, wall: false, lines: 'chain', axes: axesRings, place: placeRings,
     home: { pos: [1.7, 2.3, 3.9], target: [0, -0.1, 0], fit: 1.18 },
     // 色 = 繞著中軸的角度（也就是音名，Darjeeling 色階頭尾相接），明暗 = 高度（八度）
-    cloud: { pal: 'darjeeling', wheel: true, lin: [0, 0, 0, 0], R0: 0.034, Rk: 0.08, grow: 0.25, dot: 0.011, sz: [0, 1.7, 0], shp: [1, 0, 0.7], pxMax: 12 },
-    legend: ['C', 'B　繞一圈回到 C', '筆觸順著年輪的方向；低音粗而長，高音細而短；團的大小 = 響度'],
-    srow: ['紋', '大小 → 音域', '每一顆是一小段順著年輪方向的筆觸。低音粗而長，越高越細越短，最後變成細點：低沉的聲音「比較大」，尖細的聲音「比較小」。', 'Mondloch & Maurer 2004 · 音高 ↔ 大小'],
+    cloud: { pal: 'darjeeling', wheel: true, lin: [0, 0, 0, 0], R0: 0.034, Rk: 0.08, grow: 0.25, dot: 0.012, sz: [0, 1.2, 0], shp: [1, 0, 1], pxMax: 10 },
+    legend: ['C', 'B　繞一圈回到 C', '細點排成順著年輪的弧；低音的點較大、高音較小'],
+    srow: ['弧', '大小 → 音域', '每個聲音是一小段順著年輪攤開的弧，由細點組成。低音的點比較大，越高越小：低沉的聲音「比較大」，尖細的聲音「比較小」。', 'Mondloch & Maurer 2004 · 音高 ↔ 大小'],
     crow: ['色', '音名 → 顏色', '顏色就是音名：每一個 C 都是同一個顏色，十二個音繞一圈，顏色也繞一圈回到原點（紅、橘、芥黃、青綠、天藍、薰衣草）。明暗跟著八度，越高越亮。配色參考 Wes Anderson 的 The Darjeeling Limited。', 'Shepard 1964 · pitch circularity'],
     rows: [
       ['圓', '音名', 'C 到 B 十二個音繞成一圈；高一個八度的同名音，落在同一個角度。', 'Shepard 1964 · pitch circularity'],
@@ -860,7 +858,8 @@ function setHold(nextPaused, nextFrozen) {
   else if (!held() && wasHeld) shift = raw - holdAt;
 }
 const S = { rel: null, pitch: 0, conf: 0, cen: null, seen: -9 };
-let showLines = true, showLabels = true, rotOn = false;
+const showLines = true;                  // 點之間的連線一直開著
+let showLabels = true, rotOn = false;
 let lastHeard = 0, silentSince = null, status = 'wait';
 const segs = [];       // 每一段連續的聲音 = 一個聲音物件
 
@@ -918,15 +917,10 @@ function clearAll() {
 }
 
 // ---------- 畫面上的數字、狀態 ----------
-function setStatus(cls, text, retry = false) {
+function setStatus(cls, text) {
+  $('status').hidden = cls === 'bad';               // 出錯時（沒權限、沒麥克風）不顯示任何字，畫面保持乾淨
   $('status').className = 'status ' + cls;
-  $('statusText').textContent = text;
-  if (retry) {
-    const b = document.createElement('button');
-    b.textContent = '再試一次';
-    b.onclick = () => startMic();
-    $('statusText').append(' ', b);
-  }
+  $('statusText').textContent = cls === 'bad' ? '' : text;
 }
 function updateNow(now, alive) {
   const fresh = now - S.seen < 1.5 && S.rel != null && S.rel >= cfg.minRel;
@@ -1112,7 +1106,6 @@ function toggle(id, get, set) {
   $(id).addEventListener('click', () => { const v = !get(); set(v); $(id).setAttribute('aria-pressed', String(v)); });
 }
 toggle('bRot', () => rotOn, v => { rotOn = v; });
-toggle('bLine', () => showLines, v => { showLines = v; });
 toggle('bLbl', () => showLabels, v => { showLabels = v; });
 toggle('bPause', () => paused, v => {
   setHold(v, frozen);
@@ -1146,7 +1139,7 @@ function setModel(id) {
   emitter.visible = !!md.emitter;
   ridgeSpec.group.visible = md.ridge === 'ridge';
   ridgeWater.group.visible = md.ridge === 'water';
-  $('bLine').disabled = $('bLbl').disabled = !md.points;       // 山脈、水面沒有「點之間的連線」和標籤
+  $('bLbl').disabled = !md.points;                              // 山脈、水面沒有標籤
   [...$('modelMenu').children].forEach(li => li.setAttribute('aria-selected', String(li.dataset.id === id)));
   renderRows();
   buildAxes();
@@ -1322,8 +1315,8 @@ async function startMic() {
   } catch (err) {
     status = 'bad';
     if (err && (err.name === 'NotAllowedError' || err.name === 'SecurityError'))
-      setStatus('bad', '沒有麥克風權限。請按網址列左邊的鎖頭，把麥克風改成「允許」。', true);
-    else setStatus('bad', '找不到可以用的麥克風，或被別的程式占用了。', true);
+      setStatus('bad', '');
+    else setStatus('bad', '');
     return;
   }
   const Ctx = window.AudioContext || window.webkitAudioContext;
